@@ -143,7 +143,7 @@ const ChatRoom = () => {
                 date:getCurrentTimestamp(),
                 status: "MESSAGE"
             };
-            // console.log(chatMessage);
+            
             stompClient.send("/app/message", {}, JSON.stringify(chatMessage));
             setUserData({ ...userData, "message": "" });
         }
@@ -184,10 +184,6 @@ const ChatRoom = () => {
         // Check if the entered username exists in the memberList
         const isUsernameExists = memberList.some(user => user === userData.username);
 
-        console.log(...memberList);
-
-        console.log(isUsernameExists);
-
         if (isUsernameExists) {
             try {
                 // Fetch messages for the user
@@ -199,11 +195,7 @@ const ChatRoom = () => {
                 const publicMessages = data.filter(message => !message.receiverName);
                 const privateMessages = data.filter(message => message.receiverName);
 
-                console.log("publicMessages");               
-                 console.log(publicMessages);
-
-                 console.log("privateMesages");               
-                 console.log(privateMessages);
+               
 
                 setPublicChats(publicMessages);
                 setPrivateChats(privateMessages);
@@ -245,7 +237,7 @@ const ChatRoom = () => {
     
             // Handle the response if needed
             const result = await response.json();
-            console.log('User added to the database:', result);
+           
         } catch (error) {
             throw new Error('Error adding user to the database:', error);
         }
@@ -290,9 +282,12 @@ const ChatRoom = () => {
                         <ul className="chat-messages">
                             {message?.map((chat, index) => (
 
-                                <li className={`message ${chat.senderName === userData.username && "self"}`} key={index}>
+                               <li className={`message-container ${chat.senderName === userData.username ?"self" :"other"}`} key={index}>
                                     {chat.senderName !== userData.username && <div className="avatar">{chat.senderName.charAt(0).toUpperCase()}</div>}
-                                    <div className="message-data">{chat.message}</div>
+                                    <div className="message-content">
+                                        <div className="message-data">{chat.message}</div>
+                                        <div className="timestamp">{chat.date}</div>
+                                    </div>
                                     {chat.senderName === userData.username && <div className="avatar self">{chat.senderName.charAt(0).toUpperCase()}</div>}
                                 </li>
 

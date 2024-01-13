@@ -1,0 +1,25 @@
+# Compiled class files
+*.class
+
+# Log files
+*.log
+
+# IntelliJ IDEA files
+.idea/
+
+# Eclipse files
+.classpath
+.project
+.settings/
+
+# Maven specific files
+target/
+
+# Spring Boot specific files
+*.iml
+*.jar
+*.war
+
+# OS generated files
+.DS_Store
+Thumbs.db

@@ -81,6 +81,7 @@ const ChatRoom = () => {
 
         stompClient.subscribe('/chatroom/public', onMessageReceived);
         stompClient.subscribe('/user/' + userData.username + '/private', onPrivateMessage);
+        stompClient.subscribe('/user/' + userData.username + '/topic', onUpdatedUsersHistory)
         // userJoin();
     }
 
@@ -122,6 +123,12 @@ const ChatRoom = () => {
     const onPrivateMessage = (payload) => {
         const payloadData = JSON.parse(payload.body);
         setPrivateChats(temp => [...temp, payloadData]);
+
+    };
+
+    const onUpdatedUsersHistory = (payload) => {
+        const payloadData = JSON.parse(payload.body);
+        console.log(payload);
 
     };
 

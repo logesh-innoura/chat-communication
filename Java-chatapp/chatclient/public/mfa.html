@@ -1,0 +1,31 @@
+<!-- HTML -->
+<button onclick="signIn()">Sign In</button>
+
+<script>
+  const config = {
+    auth: {
+      clientId: 'your-client-id',
+      authority: 'https://login.microsoftonline.com/your-tenant-id',
+      redirectUri: 'http://localhost:3000', // Redirect URI configured in Azure AD
+    },
+    cache: {
+      cacheLocation: 'localStorage',
+      storeAuthStateInCookie: true,
+    },
+  };
+
+  const msalInstance = new msal.PublicClientApplication(config);
+
+  async function signIn() {
+    const loginRequest = {
+      scopes: ['user.read'],
+    };
+
+    try {
+      const authResult = await msalInstance.loginPopup(loginRequest);
+      console.log('Authentication successful', authResult);
+    } catch (error) {
+      console.error('Authentication failed', error);
+    }
+  }
+</script>

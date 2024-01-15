@@ -43,7 +43,7 @@ const ChatRoom = () => {
     const fetchUsers = async () => {
         try {
 
-            const response = await fetch('http://localhost:8080/api/users');
+            const response = await fetch('http://13.68.177.51:8087/api/users');
             const data = await response.json();
 
             const temp = [];
@@ -69,7 +69,7 @@ const ChatRoom = () => {
 
     const connect = () => {
 
-        let Sock = new SockJS('http://localhost:8080/ws');
+        let Sock = new SockJS('http://13.68.177.51:8087/ws');
         stompClient = over(Sock);
         stompClient.connect({}, onConnected, onError);
     }
@@ -194,7 +194,7 @@ const ChatRoom = () => {
         if (isUsernameExists) {
             try {
                 // Fetch messages for the user
-                const response = await fetch(`http://localhost:8080/api/messages/${userData.username}`);
+                const response = await fetch(`http://13.68.177.51:8087/api/messages/${userData.username}`);
                 const data = await response.json();
 
                 // Separate messages into public and private chats
@@ -234,7 +234,7 @@ const ChatRoom = () => {
     const addUserToDatabase = async (username) => {
         try {
             // Perform the necessary API call to add the user to the database
-            const response = await fetch('http://localhost:8080/api/addUser', {
+            const response = await fetch('http://13.68.177.51:8087/api/addUser', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

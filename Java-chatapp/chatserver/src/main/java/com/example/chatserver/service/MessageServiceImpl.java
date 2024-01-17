@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
+import com.example.chatserver.dto.UnreadMessageCountDTO;
 import com.example.chatserver.model.ChatUsersHistory;
 import com.example.chatserver.model.MessageStatus;
 import com.example.chatserver.repository.ChatUsersHistoryRepository;
@@ -26,20 +27,22 @@ public class MessageServiceImpl implements MessageService {
     public MessageDAO messageRepository;
     @Autowired
     private SimpMessagingTemplate simpMessagingTemplate;
-
-    private MessageRepository mongoMessageRepository;
-
+    private final MessageRepository mongoMessageRepository;
     private final ChatUsersHistoryRepository chatUsersHistoryRepository;
+    private final ChatService chatService;
 
-    public MessageServiceImpl(MessageDAO messageRepository, ChatUsersHistoryRepository chatUsersHistoryRepository) {
+    public MessageServiceImpl(MessageDAO messageRepository, MessageRepository mongoMessageRepository, ChatUsersHistoryRepository chatUsersHistoryRepository, ChatService chatService) {
         this.messageRepository = messageRepository;
+        this.mongoMessageRepository = mongoMessageRepository;
         this.chatUsersHistoryRepository = chatUsersHistoryRepository;
+        this.chatService = chatService;
     }
 
     @Override
     public Message save(Message message)
     {
-        updateChatUsers(message);
+        message.setMessageStatus(MessageStatus.UNREAD);
+        //updateChatUsers(message);
         new Message();
         Message clonedMessage;
         try {
@@ -50,9 +53,11 @@ public class MessageServiceImpl implements MessageService {
         String receiver = clonedMessage.getReceiverName();
         clonedMessage.setReceiverName(clonedMessage.getSenderName());
         clonedMessage.setSenderName(receiver);
-        updateChatUsers(clonedMessage);
-        System.out.println("cloned message is : " + clonedMessage);
-        return messageRepository.save(message);
+        //updateChatUsers(clonedMessage);
+        Message result = messageRepository.save(message);
+        List<UnreadMessageCountDTO> chatUsersHistories = chatService.getUnreadMessageCount(message.getReceiverName());
+        simpMessagingTemplate.convertAndSendToUser(message.getReceiverName(), "/topic", chatUsersHistories);
+        return result;
     }
 
     @Async
@@ -102,6 +107,11 @@ public class MessageServiceImpl implements MessageService {
         return chatUsersHistoryRepository.findBySenderOrderByLastUpdatedDesc(sender);
     }
 
+    public void countUnReadMessageBySender(String userName)
+    {
+
+    }
+
     @Override
     public Long countMessageBySenderNameAndReceiverNameAndMessageStatus(String sender, String receiver, MessageStatus messageStatus) {
         return mongoMessageRepository.countMessageBySenderNameAndReceiverNameAndMessageStatus(sender, receiver, messageStatus);
@@ -111,7 +121,7 @@ public class MessageServiceImpl implements MessageService {
     public Page<Message> findMessageBySenderNameAndReceiverNameOrderByTimeStampDesc(String sender, String receiver, int pageNo, int pageSize)
     {
         Pageable pageable = PageRequest.of(pageNo, pageSize);
-        return mongoMessageRepository.findMessageBySenderNameAndReceiverNameOrderByTimeStampDesc(sender, receiver, pageable);
+        return mongoMessageRepository.findBySenderNameAndReceiverNameOrSenderNameAndReceiverNameOrderByTimeStampDesc(sender, receiver, receiver, sender, pageable);
     }
 
     @Override

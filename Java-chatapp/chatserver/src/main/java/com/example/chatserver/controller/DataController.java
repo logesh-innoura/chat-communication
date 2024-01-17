@@ -3,13 +3,14 @@ package com.example.chatserver.controller;
 import java.io.IOException;
 import java.util.List;
 
-import com.azure.core.annotation.Post;
 import com.example.chatserver.dto.StatusChangeDTO;
 import com.example.chatserver.model.ChatUsersHistory;
 import com.example.chatserver.model.MessageStatus;
 import com.example.chatserver.service.AzureBlobService;
+import com.example.chatserver.service.ChatService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.example.chatserver.model.Message;
@@ -26,11 +27,13 @@ public class DataController {
     public MessageService messageService;
     public UserService userService;
     private final AzureBlobService azureBlobService;
+    private final ChatService chatService;
 
-    public DataController(MessageService messageService, UserService userService, AzureBlobService azureBlobService) {
+    public DataController(MessageService messageService, UserService userService, AzureBlobService azureBlobService, ChatService chatService) {
         this.messageService = messageService;
         this.userService = userService;
         this.azureBlobService = azureBlobService;
+        this.chatService = chatService;
     }
 
     @GetMapping("/users")
@@ -109,6 +112,12 @@ public class DataController {
     public void changeStatus(@RequestBody StatusChangeDTO statusChangeDTO)
     {
         messageService.markMessagesStatus(statusChangeDTO.getMessageIds(), statusChangeDTO.getMessageStatus());
+    }
+
+    @GetMapping("/get/history") // while starting or opening the screen call this api and show the users with message. //TODO the bug is there if loading the first time get this response
+    public ResponseEntity<?> getUsersWithMessageHistory(@RequestParam("receiver") String receiver)
+    {
+        return ResponseEntity.ok().body(chatService.getUnreadMessageCount(receiver));
     }
 
 }

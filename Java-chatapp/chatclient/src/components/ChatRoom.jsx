@@ -4,6 +4,7 @@ import Badge from "react-bootstrap/Badge";
 import ListGroup from "react-bootstrap/ListGroup";
 import Form from "react-bootstrap/Form";
 import SockJS from "sockjs-client";
+import TimeAgo from 'react-timeago';
 import profile from "../assets/profile.jpeg";
 
 var stompClient = null;
@@ -144,7 +145,7 @@ const ChatRoom = () => {
 
   const connectingFunction = async () => {
     const isUsernameExists = users.some((user) => user === userData.username);
-
+    
     if (isUsernameExists) {
       try {
         // Connect to WebSocket after updating state
@@ -176,7 +177,7 @@ const ChatRoom = () => {
     if (stompClient) {
       const chatMessage = {
         senderName: userData.username,
-        receiverName: tab,
+        receiverName: currentChatMember.sender.senderName,
         message: userData.message,
         date: getCurrentTimestamp(),
         status: "MESSAGE",
@@ -377,7 +378,7 @@ const ChatRoom = () => {
                               );
                             }}
                             className="ms-2"
-                            style={{ width: "100%" }}
+                            style={{ width: "100%", cursor: "pointer" }}
                           >
                             <div className="fw-bold">
                               {senderName}
@@ -392,7 +393,13 @@ const ChatRoom = () => {
                             <span>{lastMessage}</span>
 
                             <span className="left-member-time">
-                              {lastMessageTimeStamp}
+                                <TimeAgo
+                                    date={lastMessageTimeStamp}
+                                    // component={Text}
+                                    minPeriod={60}
+                                    // style={styles.timeAgo}
+                                />
+                              {/* {lastMessageTimeStamp} */}
                             </span>
                           </div>
                         </ListGroup.Item>

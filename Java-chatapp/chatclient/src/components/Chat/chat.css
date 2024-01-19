@@ -1,0 +1,4 @@
+.chat-persons li:hover {
+    background-color: rgb(235, 232, 232);
+    cursor: pointer;
+}

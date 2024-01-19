@@ -23,3 +23,12 @@ public class ChatUsersHistory {
     private String receiver;
     private Instant lastUpdated;
 }
+
+
+/*
+Logesh --> ramesh  (logesh is receiver, and ramesh is sender)
+if logesh enters ramesh chat , all the messages of the ramesh's will read, hit the api call for read, store the last read time.
+if logesh enters the chat application or online of the send call to deliver.
+
+
+*/

@@ -1,11 +1,15 @@
 package com.example.chatserver.controller;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.List;
 
+import com.example.chatserver.config.Messages;
+import com.example.chatserver.dto.FileDTO;
 import com.example.chatserver.dto.StatusChangeDTO;
 import com.example.chatserver.model.ChatUsersHistory;
 import com.example.chatserver.model.MessageStatus;
+import com.example.chatserver.response.ApiResponse;
 import com.example.chatserver.service.AzureBlobService;
 import com.example.chatserver.service.ChatService;
 import lombok.extern.slf4j.Slf4j;
@@ -84,12 +88,17 @@ public class DataController {
     }
 
     @PostMapping("/uploadFile")
-    public String uploadFileAndGetToken(@RequestParam MultipartFile file)
+    public ResponseEntity<ApiResponse<?>> uploadFileAndGetToken(@RequestParam MultipartFile file)
     {
         try {
             String blobName = azureBlobService.uploadFileToBlob( file.getOriginalFilename(),
                     file.getInputStream(), file.getSize());
-            return azureBlobService.generateSasToken(blobName);
+            String token = azureBlobService.generateSasToken(blobName);
+            FileDTO fileDTO = new FileDTO();
+            fileDTO.setFileUploadedUrl(token);
+            fileDTO.setUploadedDate(Instant.now());
+            return ResponseEntity.ok().body(new ApiResponse<>(ApiResponse.Status.SUCCESS, Messages.SUCCESS,
+                    fileDTO));
         } catch (IOException e) {
             log.error("error while uploading file of the message");
             throw new RuntimeException("Exception while uploading file");

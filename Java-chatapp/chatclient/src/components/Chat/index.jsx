@@ -7,7 +7,7 @@ import Form from "react-bootstrap/Form";
 import _ from "lodash";
 import SockJS from "sockjs-client";
 import profile from "../../assets/user-profile-default.png";
-import './chat.css';
+import "./chat.css";
 import {
   MDBContainer,
   MDBRow,
@@ -20,6 +20,7 @@ import {
   MDBTextArea,
   MDBCardHeader,
   MDBInputGroup,
+  MDBTooltip,
 } from "mdb-react-ui-kit";
 
 let stompClient = null;
@@ -500,11 +501,19 @@ export default function App() {
                                             backgroundColor:
                                               currentChatMember?.sender
                                                 ?.senderName === senderName &&
-                                              "#0d6efd",
-                                              color:
-                                                currentChatMember?.sender
-                                                  ?.senderName === senderName &&
-                                                "#fff",
+                                              "#3b71ca",
+                                            color:
+                                              currentChatMember?.sender
+                                                ?.senderName === senderName &&
+                                              "#fff",
+                                              border: 
+                                              currentChatMember?.sender
+                                                ?.senderName === senderName &&
+                                              "1px solid",
+                                              borderRadius: 
+                                              currentChatMember?.sender
+                                                ?.senderName === senderName &&
+                                              "0.5rem",
                                           }}
                                           onClick={() => {
                                             onTabChange(
@@ -716,6 +725,72 @@ export default function App() {
                                             <div>
                                               <p className="small p-2 me-3 mb-1 text-white rounded-3 bg-primary">
                                                 {chat.message}
+                                                {chat.senderName ===
+                                                  userData.username &&
+                                                  chat.messageStatus ===
+                                                    "DELIVERED" && (
+                                                    <span className="text-muted float-end">
+                                                      <MDBTooltip
+                                                        tag="a"
+                                                        wrapperProps={{
+                                                          href: "#",
+                                                        }}
+                                                        title="Sent"
+                                                      >
+                                                        <MDBIcon
+                                                          fas
+                                                          icon="check"
+                                                          style={{
+                                                            color: "black",
+                                                          }}
+                                                        />
+                                                      </MDBTooltip>
+                                                    </span>
+                                                  )}
+                                                {chat.senderName ===
+                                                  userData.username &&
+                                                  chat.messageStatus ===
+                                                    "READ" && (
+                                                    <span className="text-muted float-end">
+                                                      <MDBTooltip
+                                                        tag="a"
+                                                        wrapperProps={{
+                                                          href: "#",
+                                                        }}
+                                                        title="Read"
+                                                      >
+                                                        <MDBIcon
+                                                          fas
+                                                          icon="check-double"
+                                                          style={{
+                                                            color: "white",
+                                                          }}
+                                                        />
+                                                      </MDBTooltip>
+                                                    </span>
+                                                  )}
+                                                {chat.senderName ===
+                                                  userData.username &&
+                                                  chat.messageStatus ===
+                                                    "UNREAD" && (
+                                                    <span className="text-muted float-end">
+                                                      <MDBTooltip
+                                                        tag="a"
+                                                        wrapperProps={{
+                                                          href: "#",
+                                                        }}
+                                                        title="Unread"
+                                                      >
+                                                        <MDBIcon
+                                                          fas
+                                                          icon="check"
+                                                          style={{
+                                                            color: "white",
+                                                          }}
+                                                        />
+                                                      </MDBTooltip>
+                                                    </span>
+                                                  )}
                                               </p>
                                               <p className="small me-3 mb-3 rounded-3 text-muted">
                                                 {chat.date}

@@ -550,6 +550,17 @@ export default function App() {
                                         //   <MDBIcon fas icon="check" />
                                         // </span>
                                       )}
+                                    <span className="text-muted float-end">
+                                      <MDBIcon
+                                        fas
+                                        size="xs"
+                                        icon="circle"
+                                        style={{
+                                          color: "#53c44d",
+                                          marginRight: "0.5rem",
+                                        }}
+                                      />
+                                    </span>
                                   </div>
                                 </div>
                               </li>
@@ -647,7 +658,20 @@ export default function App() {
                       <p className="fw-bold mb-0">
                         {currentChatMember?.sender?.senderName}
                       </p>
-                      <p className="small text-muted">Online</p>
+                      <p className="small text-muted">
+                        <span className="text-muted float-start">
+                          <MDBIcon
+                            fas
+                            size="xs"
+                            icon="circle"
+                            style={{
+                              color: "#53c44d",
+                              marginRight: "0.5rem",
+                            }}
+                          />
+                        </span>
+                        Online
+                      </p>
                     </div>
                   </div>
                   <MDBCardBody

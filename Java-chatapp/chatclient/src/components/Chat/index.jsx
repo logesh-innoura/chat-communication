@@ -37,6 +37,9 @@ export default function App() {
   const [messagedMembersList, setMessagedMembersList] = useState([]);
   const [searchedInMembersList, setSearchedInMembersList] = useState([]);
   const [currentChatMember, setCurrentChatMember] = useState(null);
+
+  const [page, setPage] = useState(1);
+
   const [userData, setUserData] = useState({
     username: "",
     receivername: "",
@@ -227,9 +230,11 @@ export default function App() {
           ...userData,
           receivername: currentChatMember.sender.senderName,
           message: "",
+          fileUrl: "",
+          fileName: "",
         });
       } else {
-        setUserData({ ...userData, message: "" });
+        setUserData({ ...userData, message: "", fileUrl: "", fileName: "" });
       }
       if (
         currentChatMember !== null &&
@@ -282,11 +287,11 @@ export default function App() {
     fetchUsers();
     // Check if the entered username exists in the messagedMembersList
   };
-  const handleGetChatHistory = async (sender, status) => {
+  const handleGetChatHistory = async (sender, status, pageNumber) => {
     try {
       // Fetch messages for the user
       const response = await fetch(
-        `http://13.68.177.51:8087/api/messages/private?sender=${sender.senderName}&receiver=${userData.username}&pageNo=${pageNo}&pageSize=${pageSize}`
+        `http://13.68.177.51:8087/api/messages/private?sender=${sender.senderName}&receiver=${userData.username}&pageNo=${pageNumber}&pageSize=${pageSize}`
       );
       const data = await response.json();
 
@@ -321,13 +326,14 @@ export default function App() {
     });
   };
   const onTabChange = (name, index, sender) => {
+    scrollToBottom();
     setPageNo(0);
     setCurrentChatMember({ sender, isNewMember: false });
     const data = [...searchedInMembersList];
     data[index].unreadCount = 0;
     setSearchedInMembersList(data);
 
-    handleGetChatHistory(sender, "load");
+    handleGetChatHistory(sender, "load", 0);
   };
   const handleFile = async (e) => {
     const file = e.target.files[0];
@@ -337,14 +343,20 @@ export default function App() {
       // Perform the necessary API call to add the user to the database
       const response = await fetch("http://13.68.177.51:8087/api/uploadFile", {
         method: "POST",
-
         body: formData,
       });
 
       // Handle the response if needed
       const result = await response.clone().json();
 
-      setUserData({ ...userData, fileUrl: result.response.fileUploadedUrl });
+      setUserData({
+        ...userData,
+        fileUrl: result.response.fileUploadedUrl,
+        fileName: file.name,
+        message: file.name
+          ? userData.message + `(file:${file.name})`
+          : userData.message,
+      });
     } catch (error) {
       throw new Error("Error adding user to the database:", error);
     }
@@ -393,7 +405,7 @@ export default function App() {
       (member) => member.senderName === name
     );
     if (isAlreadyMember.length === 0) {
-      handleGetChatHistory({ senderName: name }, "load");
+      handleGetChatHistory({ senderName: name }, "load", 0);
       setCurrentChatMember({
         index: null,
         isNewMember: true,
@@ -422,7 +434,7 @@ export default function App() {
   useEffect(() => {
     // Fetch the list of users
     if (pageNo > 0 && currentChatMember.sender) {
-      handleGetChatHistory(currentChatMember.sender, "add");
+      handleGetChatHistory(currentChatMember.sender, "add", pageNo);
     }
   }, [pageNo]);
 
@@ -432,7 +444,7 @@ export default function App() {
         <MDBContainer
           fluid
           // className="py-3"
-          style={{ backgroundColor: "#e1e3ff", minHeight: "100vh" }}
+          style={{ backgroundColor: "#fff", minHeight: "100vh" }}
         >
           <MDBRow>
             <MDBCol md="3" lg="3" xl="3" className="mb-4 mb-md-0">
@@ -452,21 +464,22 @@ export default function App() {
                     </h6>
                     <MDBInputGroup className="rounded">
                       <input
-                        className="form-control rounded"
+                        className="form-control rounded search"
                         placeholder="Search messages"
                         type="search"
                         onChange={handleSearchMembers}
                       />
-                      <span
-                        className="input-group-text border-0"
-                        id="search-addon"
-                      >
-                        <MDBIcon fas icon="search" />
-                      </span>
                     </MDBInputGroup>
                   </div>
                 )}
-                <MDBCardBody style={{ height: "0px", overflowY: "auto" }}>
+                <MDBCardBody
+                  className="m-3 border"
+                  style={{
+                    height: "0px",
+                    overflowY: "auto",
+                    borderRadius: "0.25rem",
+                  }}
+                >
                   {messagedMembersList ? (
                     <MDBTypography listUnStyled className="mb-0">
                       {searchedInMembersList && (
@@ -487,13 +500,10 @@ export default function App() {
                                 style={{
                                   backgroundColor:
                                     currentChatMember?.sender?.senderName ===
-                                      senderName && "#3b71ca",
+                                      senderName && "rgb(220 226 236)",
                                   color:
                                     currentChatMember?.sender?.senderName ===
-                                      senderName && "#fff",
-                                  border:
-                                    currentChatMember?.sender?.senderName ===
-                                      senderName && "1px solid",
+                                      senderName && "#000",
                                   borderRadius:
                                     currentChatMember?.sender?.senderName ===
                                       senderName && "0.5rem",
@@ -530,14 +540,16 @@ export default function App() {
                                         minPeriod={60}
                                       />
                                     </p>
-                                    {unreadCount > 0 && (
-                                      <span className="badge bg-danger float-end">
-                                        {unreadCount}
-                                      </span>
-                                      // <span className="text-muted float-end">
-                                      //   <MDBIcon fas icon="check" />
-                                      // </span>
-                                    )}
+                                    {unreadCount > 0 &&
+                                      currentChatMember?.sender?.senderName !==
+                                        senderName && (
+                                        <span className="badge bg-danger float-end">
+                                          {unreadCount}
+                                        </span>
+                                        // <span className="text-muted float-end">
+                                        //   <MDBIcon fas icon="check" />
+                                        // </span>
+                                      )}
                                   </div>
                                 </div>
                               </li>
@@ -556,9 +568,9 @@ export default function App() {
             </MDBCol>
 
             {!currentChatMember && (
-              <MDBCol md="6" lg="6" xl="6">
+              <MDBCol md="6" lg="6" xl="6" className="p-0">
                 <div>
-                  <h1>Recent Chats</h1>
+                  <h4 style={{ padding: "9px" }}>Recent Chats</h4>
                   {messagedMembersList && (
                     <div className="chatMembers">
                       {searchedInMembersList && (
@@ -639,6 +651,7 @@ export default function App() {
                     </div>
                   </div>
                   <MDBCardBody
+                    className="mt-1"
                     style={{ height: "0px", overflowY: "auto" }}
                     onScroll={handleChatScroll}
                   >
@@ -666,20 +679,29 @@ export default function App() {
                                     />
                                     <div>
                                       <p
-                                        className="small p-2 ms-3 mb-1 rounded-3"
-                                        style={{
-                                          backgroundColor: "#f5f6f7",
-                                        }}
+                                        className={`small p-2 me-3 mb-1 text-white rounded-3 ${
+                                          chat.fileUrl
+                                            ? "bg-warning"
+                                            : "bg-primary"
+                                        }`}
                                       >
                                         {chat.message}
+                                        {chat.fileUrl && (
+                                          <a
+                                            className="download-link"
+                                            href={chat.fileUrl}
+                                          >
+                                            <MDBIcon
+                                              fas
+                                              icon="download"
+                                              style={{
+                                                color: "white",
+                                              }}
+                                            />
+                                          </a>
+                                        )}
                                       </p>
-                                      {chat.fileUrl && (
-                                        <embed
-                                          src={chat.fileUrl}
-                                          width="100px"
-                                          height="100px"
-                                        />
-                                      )}
+
                                       <p className="small ms-3 mb-3 rounded-3 text-muted float-end">
                                         {chat.date}
                                       </p>
@@ -691,8 +713,28 @@ export default function App() {
                                     key={index}
                                   >
                                     <div>
-                                      <p className="small p-2 me-3 mb-1 text-white rounded-3 bg-primary">
+                                      <p
+                                        className={`small p-2 me-3 mb-1 text-white rounded-3 ${
+                                          chat.fileUrl
+                                            ? "bg-warning"
+                                            : "bg-primary"
+                                        }`}
+                                      >
                                         {chat.message}
+                                        {chat.fileUrl && (
+                                          <a
+                                            className="download-link"
+                                            href={chat.fileUrl}
+                                          >
+                                            <MDBIcon
+                                              fas
+                                              icon="download"
+                                              style={{
+                                                color: "white",
+                                              }}
+                                            />
+                                          </a>
+                                        )}
                                         {chat.senderName ===
                                           userData.username &&
                                           chat.messageStatus ===
@@ -710,6 +752,7 @@ export default function App() {
                                                   icon="check"
                                                   style={{
                                                     color: "black",
+                                                    marginLeft: "1rem",
                                                   }}
                                                 />
                                               </MDBTooltip>
@@ -731,6 +774,7 @@ export default function App() {
                                                   icon="check-double"
                                                   style={{
                                                     color: "white",
+                                                    marginLeft: "1rem",
                                                   }}
                                                 />
                                               </MDBTooltip>
@@ -752,6 +796,7 @@ export default function App() {
                                                   icon="check"
                                                   style={{
                                                     color: "white",
+                                                    marginLeft: "1rem",
                                                   }}
                                                 />
                                               </MDBTooltip>
@@ -761,13 +806,6 @@ export default function App() {
                                       <p className="small me-3 mb-3 rounded-3 text-muted">
                                         {chat.date}
                                       </p>
-                                      {chat.fileUrl && (
-                                        <embed
-                                          src={chat.fileUrl}
-                                          width="100px"
-                                          height="100px"
-                                        />
-                                      )}
                                     </div>
                                     <img
                                       src="https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-chat/ava1-bg.webp"
@@ -816,12 +854,7 @@ export default function App() {
                               </div> */}
                     </div>
                   </MDBCardBody>
-                  <div className="text-muted d-flex justify-content-start align-items-center pe-3 pt-3 mt-2">
-                    <img
-                      src="https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-chat/ava1-bg.webp"
-                      alt="avatar 3"
-                      style={{ width: "40px", height: "100%" }}
-                    />
+                  <div className="text-muted d-flex justify-content-start align-items-center pe-3 pt-3 mt-2 footer mb-3">
                     <input
                       type="text"
                       className="form-control form-control-lg"
@@ -830,19 +863,24 @@ export default function App() {
                       value={userData.message}
                       onChange={handleMessage}
                     />
-                    <a className="ms-1 text-muted" href="#!">
-                      <input
-                        type={"file"}
-                        onChange={handleFile}
-                        className="ms-1 text-muted"
-                      />
+                    <label className="ms-3" htmlFor="fileAdd">
+                      <MDBIcon fas icon="upload" />
+                    </label>
 
-                      {/* <label for="image">
+                    <input
+                      type={"file"}
+                      onChange={handleFile}
+                      id="fileAdd"
+                      style={{ display: "none" }}
+                      className="ms-1 text-muted"
+                    />
+
+                    {/* <label for="image">
                           <input type="file" name="image" id="image" style={{display: 'none'}}
                                     onChange={handleFile}/>
                           <img src={profile} width={20}/>
                       </label> */}
-                    </a>
+
                     <a className="ms-3" onClick={handleSendMessage}>
                       <MDBIcon fas icon="paper-plane" />
                     </a>
@@ -855,7 +893,7 @@ export default function App() {
               <MDBCard style={{ minHeight: "100vh" }}>
                 <div className="mt-3 border-bottom">
                   <h5 className="font-weight-bold mb-3 text-center">
-                    Directory
+                    Welcome {userData.username}
                   </h5>
                 </div>
                 <div className="p-3">
@@ -865,23 +903,24 @@ export default function App() {
                   </h6>
                   <MDBInputGroup className="rounded">
                     <input
-                      className="form-control rounded"
+                      className="form-control rounded search"
                       placeholder="Search a new user"
                       type="search"
                       value={userData.searchNewUserMessage}
                       onChange={handleSearchUser}
                     />
-                    <span
-                      className="input-group-text border-0"
-                      id="search-addon"
-                    >
-                      <MDBIcon fas icon="search" />
-                    </span>
                   </MDBInputGroup>
                 </div>
-                <MDBCardBody style={{ height: "0px", overflowY: "auto" }}>
+                <MDBCardBody
+                  className="m-3 border"
+                  style={{
+                    height: "0px",
+                    overflowY: "auto",
+                    borderRadius: "0.5rem",
+                  }}
+                >
                   {searchedUsers && (
-                    <MDBTypography listUnStyled className="mb-0">
+                    <MDBTypography listUnStyled className="mb-4">
                       <ul className="chat-persons">
                         {searchedUsers?.map((name, index) => (
                           <li className="p-2 border-bottom" key={index}>

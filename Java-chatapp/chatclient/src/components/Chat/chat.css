@@ -2,3 +2,18 @@
     background-color: rgb(235, 232, 232);
     cursor: pointer;
 }
+.search {
+    background-color: rgb(249 244 244);;
+    padding: 16px 11px;
+    border-radius: 5px;
+    border: none;
+    outline: none;
+}
+.card-body {
+    padding-top: 0 !important;}
+    .download-link {
+        padding-left: 10px;
+    }
+    .footer{
+        border-top: 1px solid lightgray;
+    }

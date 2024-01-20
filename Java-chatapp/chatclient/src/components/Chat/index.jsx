@@ -518,11 +518,18 @@ export default function App() {
                               >
                                 <div className="d-flex justify-content-between">
                                   <div className="d-flex flex-row">
-                                    <img
+                                    {/* <img
                                       src={profile}
                                       alt="avatar"
                                       className="d-flex align-self-center me-3 shadow-1-strong"
                                       width="50"
+                                    /> */}
+                                    <MDBIcon
+                                      className="d-flex align-self-center me-3"
+                                      fas
+                                      size="3x"
+                                      icon="user-circle"
+                                      style={{ color: "#3b71ca" }}
                                     />
                                     <div className="pt-1">
                                       <p className="fw-bold mb-0">
@@ -648,11 +655,18 @@ export default function App() {
               <MDBCol md="6" lg="6" xl="6">
                 <MDBCard style={{ minHeight: "100vh" }}>
                   <div className="d-flex flex-row justify-content-center border-bottom">
-                    <img
+                    {/* <img
                       src={profile}
                       alt="avatar"
                       className="d-flex align-self-center me-3 shadow-1-strong"
                       width="40"
+                    /> */}
+                    <MDBIcon
+                      className="d-flex align-self-center me-3"
+                      fas
+                      size="3x"
+                      icon="user-circle"
+                      style={{ color: "#3b71ca" }}
                     />
                     <div className="pt-1">
                       <p className="fw-bold mb-0">
@@ -693,22 +707,16 @@ export default function App() {
                                     key={index}
                                     ref={index === 2 ? messagesTopRef : {}}
                                   >
-                                    <img
+                                    {/* <img
                                       src="https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-chat/ava6-bg.webp"
                                       alt="avatar 1"
                                       style={{
                                         width: "45px",
                                         height: "100%",
                                       }}
-                                    />
+                                    /> */}
                                     <div>
-                                      <p
-                                        className={`small p-2 me-3 mb-1 text-white rounded-3 ${
-                                          chat.fileUrl
-                                            ? "bg-warning"
-                                            : "bg-primary"
-                                        }`}
-                                      >
+                                      <p className="small p-2 ms-3 mb-1 text-white bg-info bg-gradient bubble-left">
                                         {chat.message}
                                         {chat.fileUrl && (
                                           <a
@@ -717,6 +725,7 @@ export default function App() {
                                           >
                                             <MDBIcon
                                               fas
+                                              size="sm"
                                               icon="download"
                                               style={{
                                                 color: "white",
@@ -737,13 +746,7 @@ export default function App() {
                                     key={index}
                                   >
                                     <div>
-                                      <p
-                                        className={`small p-2 me-3 mb-1 text-white rounded-3 ${
-                                          chat.fileUrl
-                                            ? "bg-warning"
-                                            : "bg-primary"
-                                        }`}
-                                      >
+                                      <p className="small p-2 me-3 mb-1 text-white bg-primary bg-gradient bubble-right">
                                         {chat.message}
                                         {chat.fileUrl && (
                                           <a
@@ -752,6 +755,7 @@ export default function App() {
                                           >
                                             <MDBIcon
                                               fas
+                                              size="sm"
                                               icon="download"
                                               style={{
                                                 color: "white",
@@ -774,6 +778,7 @@ export default function App() {
                                                 <MDBIcon
                                                   fas
                                                   icon="check"
+                                                  size="xs"
                                                   style={{
                                                     color: "black",
                                                     marginLeft: "1rem",
@@ -796,6 +801,7 @@ export default function App() {
                                                 <MDBIcon
                                                   fas
                                                   icon="check-double"
+                                                  size="xs"
                                                   style={{
                                                     color: "white",
                                                     marginLeft: "1rem",
@@ -818,6 +824,7 @@ export default function App() {
                                                 <MDBIcon
                                                   fas
                                                   icon="check"
+                                                  size="xs"
                                                   style={{
                                                     color: "white",
                                                     marginLeft: "1rem",
@@ -831,14 +838,14 @@ export default function App() {
                                         {chat.date}
                                       </p>
                                     </div>
-                                    <img
+                                    {/* <img
                                       src="https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-chat/ava1-bg.webp"
                                       alt="avatar 1"
                                       style={{
                                         width: "45px",
                                         height: "100%",
                                       }}
-                                    />
+                                    /> */}
                                   </li>
                                 )}
                               </>
@@ -888,7 +895,7 @@ export default function App() {
                       onChange={handleMessage}
                     />
                     <label className="ms-3" htmlFor="fileAdd">
-                      <MDBIcon fas icon="upload" />
+                      <MDBIcon fas icon="upload" style={{ color: "#3b71ca" }} />
                     </label>
 
                     <input
@@ -955,11 +962,18 @@ export default function App() {
                               }}
                             >
                               <div className="d-flex flex-row">
-                                <img
+                                {/* <img
                                   src={profile}
                                   alt="avatar"
                                   className="d-flex align-self-center me-3 shadow-1-strong"
                                   width="50"
+                                /> */}
+                                <MDBIcon
+                                  className="d-flex align-self-center me-3"
+                                  fas
+                                  size="3x"
+                                  icon="user-circle"
+                                  style={{ color: "#3b71ca" }}
                                 />
                                 <div className="pt-1">
                                   <p className="fw-bold mb-0">{name}</p>

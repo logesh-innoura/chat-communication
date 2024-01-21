@@ -230,6 +230,7 @@ export default function App() {
       stompClient.send("/app/private-message", {}, JSON.stringify(chatMessage));
 
       setMessages([...message, chatMessage]);
+      setFileModal(false);
       if (!userData.receivername) {
         setUserData({
           ...userData,
@@ -240,7 +241,6 @@ export default function App() {
         });
       } else {
         setUserData({ ...userData, message: "", fileUrl: "", fileName: "" });
-        setFileModal(false);
       }
       if (
         currentChatMember !== null &&
@@ -262,6 +262,7 @@ export default function App() {
     } else {
       connect();
       handleSendMessage();
+      setFileModal(false);
     }
   };
 
@@ -723,8 +724,8 @@ export default function App() {
                     </div>
                   </div>
                   {fileModal ? (
-                    <MDBCardBody className="mt-1">
-                      <div className="mt-4 p-4 text-center">
+                    <MDBCardBody className="mt-1 border">
+                      <div className="mt-2 p-2 text-center">
                         <MDBIcon
                           className="d-flex align-self-center mt-3 me-3 float-end"
                           fas
@@ -733,25 +734,29 @@ export default function App() {
                           style={{ color: "#3b71ca", cursor: "pointer" }}
                           onClick={handleFileModalClose}
                         />
-                        <div style={{ color: "#3b71ca" }}>
-                          {userData.fileName}
-                        </div>
-                        <div className="pt-4">
+                        <p className="fw-bold mb-0">Attachment</p>
+                        <div className="pt-2">
                           {!imgExtensions.exec(userData.fileName) ? (
-                            <MDBIcon
-                              className="mt-3 me-3"
-                              fas
-                              size="10x"
-                              icon="file-lines"
-                              style={{ color: "#3b71ca" }}
-                            />
+                            <>
+                              <MDBIcon
+                                className="mt-3 me-3"
+                                fas
+                                size="10x"
+                                icon="file-lines"
+                                style={{ color: "#3b71ca" }}
+                              />
+                              <p>{userData.fileName}</p>
+                            </>
                           ) : (
-                            <img
-                              src={userData.fileUrl}
-                              height={300}
-                              width={300}
-                              alt={userData.fileName}
-                            />
+                            <>
+                              <img
+                                src={userData.fileUrl}
+                                height={300}
+                                width={300}
+                                alt={userData.fileName}
+                              />
+                              <p>{userData.fileName}</p>
+                            </>
                           )}
                         </div>
                       </div>
@@ -927,7 +932,7 @@ export default function App() {
                     </MDBCardBody>
                   )}
 
-                  <div className="text-muted d-flex justify-content-start align-items-center pe-3 pt-3 mt-2 mb-3">
+                  <div className="text-muted d-flex justify-content-start align-items-center pe-3 pt-3 mt-2 mb-3 ms-3">
                     <input
                       type="text"
                       className="form-control form-control-lg"
@@ -937,7 +942,11 @@ export default function App() {
                       onChange={handleMessage}
                     />
                     <label className="ms-3" htmlFor="fileAdd">
-                      <MDBIcon fas icon="link" style={{ color: "#3b71ca", cursor: 'pointer' }} />
+                      <MDBIcon
+                        fas
+                        icon="link"
+                        style={{ color: "#3b71ca", cursor: "pointer" }}
+                      />
                     </label>
 
                     <input
@@ -955,7 +964,11 @@ export default function App() {
                       </label> */}
 
                     <a className="ms-3" onClick={handleSendMessage}>
-                      <MDBIcon fas icon="paper-plane" style={{ color: "#3b71ca", cursor: 'pointer' }} />
+                      <MDBIcon
+                        fas
+                        icon="paper-plane"
+                        style={{ color: "#3b71ca", cursor: "pointer" }}
+                      />
                     </a>
                   </div>
                 </MDBCard>

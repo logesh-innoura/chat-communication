@@ -7,6 +7,8 @@ import Form from "react-bootstrap/Form";
 import _ from "lodash";
 import SockJS from "sockjs-client";
 import profile from "../../assets/user-profile-default.png";
+import { ToastContainer, toast } from "react-toastify";
+
 import "./chat.css";
 import {
   MDBContainer,
@@ -50,6 +52,8 @@ export default function App() {
   });
   const [loading, setLoading] = useState(false);
   const [isLastPage, setIsLastPage] = useState();
+  const allowedExtensions = /(\.jpg|\.jpeg|\.png|\.pdf|\.xls|\.xlsx)$/i;
+  const imgExtensions = /(\.jpg|\.jpeg|\.png)$/i;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -236,6 +240,7 @@ export default function App() {
         });
       } else {
         setUserData({ ...userData, message: "", fileUrl: "", fileName: "" });
+        setFileModal(false);
       }
       if (
         currentChatMember !== null &&
@@ -338,29 +343,57 @@ export default function App() {
   };
   const handleFile = async (e) => {
     const file = e.target.files[0];
-    let formData = new FormData();
-    formData.append("file", file);
-    try {
-      // Perform the necessary API call to add the user to the database
-      const response = await fetch("http://13.68.177.51:8087/api/uploadFile", {
-        method: "POST",
-        body: formData,
+    if (!allowedExtensions.exec(file.name)) {
+      toast.error("File type not allowed", {
+        position: "bottom-right",
+        autoClose: 10000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "colored",
       });
+      // fileInput.value = '';
+      return false;
+    } else {
+      let formData = new FormData();
+      formData.append("file", file);
+      try {
+        // Perform the necessary API call to add the user to the database
+        const response = await fetch(
+          "http://13.68.177.51:8087/api/uploadFile",
+          {
+            method: "POST",
+            body: formData,
+          }
+        );
 
-      // Handle the response if needed
-      const result = await response.clone().json();
+        // Handle the response if needed
+        const result = await response.clone().json();
 
-      setUserData({
-        ...userData,
-        fileUrl: result.response.fileUploadedUrl,
-        fileName: file.name,
-        message: file.name
-          ? userData.message + `(file:${file.name})`
-          : userData.message,
-      });
-      setFileModal(true);
-    } catch (error) {
-      throw new Error("Error adding user to the database:", error);
+        setUserData({
+          ...userData,
+          fileUrl: result.response.fileUploadedUrl,
+          fileName: file.name,
+          message: file.name
+            ? userData.message + `(file:${file.name})`
+            : userData.message,
+        });
+        setFileModal(true);
+      } catch (error) {
+        // throw new Error("Error adding user to the database:", error);
+        toast.error("Error occured when adding file", {
+          position: "bottom-right",
+          autoClose: 10000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "colored",
+        });
+      }
     }
   };
   const addUserToDatabase = async (username) => {
@@ -447,6 +480,7 @@ export default function App() {
 
   return (
     <>
+      <ToastContainer />
       {userData.connected ? (
         <MDBContainer
           fluid
@@ -690,15 +724,37 @@ export default function App() {
                   </div>
                   {fileModal ? (
                     <MDBCardBody className="mt-1">
-                      <MDBIcon
-                        className="d-flex align-self-center mt-3 me-3 float-end"
-                        fas
-                        size="lg"
-                        icon="close"
-                        style={{ color: "#3b71ca", cursor: "pointer" }}
-                        onClick={handleFileModalClose}
-                      />
-                      <div>File Name: {userData.fileName}</div>
+                      <div className="mt-4 p-4 text-center">
+                        <MDBIcon
+                          className="d-flex align-self-center mt-3 me-3 float-end"
+                          fas
+                          size="lg"
+                          icon="close"
+                          style={{ color: "#3b71ca", cursor: "pointer" }}
+                          onClick={handleFileModalClose}
+                        />
+                        <div style={{ color: "#3b71ca" }}>
+                          {userData.fileName}
+                        </div>
+                        <div className="pt-4">
+                          {!imgExtensions.exec(userData.fileName) ? (
+                            <MDBIcon
+                              className="mt-3 me-3"
+                              fas
+                              size="10x"
+                              icon="file-lines"
+                              style={{ color: "#3b71ca" }}
+                            />
+                          ) : (
+                            <img
+                              src={userData.fileUrl}
+                              height={300}
+                              width={300}
+                              alt={userData.fileName}
+                            />
+                          )}
+                        </div>
+                      </div>
                     </MDBCardBody>
                   ) : (
                     <MDBCardBody
@@ -737,8 +793,8 @@ export default function App() {
                                             >
                                               <MDBIcon
                                                 fas
-                                                size="sm"
-                                                icon="download"
+                                                size="lg"
+                                                icon="file-lines"
                                                 style={{
                                                   color: "white",
                                                 }}
@@ -767,8 +823,8 @@ export default function App() {
                                             >
                                               <MDBIcon
                                                 fas
-                                                size="sm"
-                                                icon="download"
+                                                size="lg"
+                                                icon="file-lines"
                                                 style={{
                                                   color: "white",
                                                 }}
@@ -881,7 +937,7 @@ export default function App() {
                       onChange={handleMessage}
                     />
                     <label className="ms-3" htmlFor="fileAdd">
-                      <MDBIcon fas icon="upload" style={{ color: "#3b71ca" }} />
+                      <MDBIcon fas icon="link" style={{ color: "#3b71ca", cursor: 'pointer' }} />
                     </label>
 
                     <input
@@ -899,7 +955,7 @@ export default function App() {
                       </label> */}
 
                     <a className="ms-3" onClick={handleSendMessage}>
-                      <MDBIcon fas icon="paper-plane" />
+                      <MDBIcon fas icon="paper-plane" style={{ color: "#3b71ca", cursor: 'pointer' }} />
                     </a>
                   </div>
                 </MDBCard>

@@ -17,6 +17,7 @@
     "react-dom": "^18.2.0",
     "react-scripts": "^5.0.1",
     "react-timeago": "^7.2.0",
+    "react-toastify": "^10.0.4",
     "sockjs-client": "^1.6.1",
     "stompjs": "^2.3.3",
     "web-vitals": "^2.1.4"

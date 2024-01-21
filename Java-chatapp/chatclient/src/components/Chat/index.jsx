@@ -37,6 +37,7 @@ export default function App() {
   const [messagedMembersList, setMessagedMembersList] = useState([]);
   const [searchedInMembersList, setSearchedInMembersList] = useState([]);
   const [currentChatMember, setCurrentChatMember] = useState(null);
+  const [fileModal, setFileModal] = useState(false);
 
   const [page, setPage] = useState(1);
 
@@ -357,6 +358,7 @@ export default function App() {
           ? userData.message + `(file:${file.name})`
           : userData.message,
       });
+      setFileModal(true);
     } catch (error) {
       throw new Error("Error adding user to the database:", error);
     }
@@ -438,6 +440,11 @@ export default function App() {
     }
   }, [pageNo]);
 
+  const handleFileModalClose = () => {
+    setFileModal(false);
+    setUserData({ ...userData, message: "", fileUrl: "", fileName: "" });
+  };
+
   return (
     <>
       {userData.connected ? (
@@ -472,14 +479,7 @@ export default function App() {
                     </MDBInputGroup>
                   </div>
                 )}
-                <MDBCardBody
-                  className="m-3 border"
-                  style={{
-                    height: "0px",
-                    overflowY: "auto",
-                    borderRadius: "0.25rem",
-                  }}
-                >
+                <MDBCardBody className="m-3 customScroll">
                   {messagedMembersList ? (
                     <MDBTypography listUnStyled className="mb-0">
                       {searchedInMembersList && (
@@ -496,7 +496,7 @@ export default function App() {
                             ) => (
                               <li
                                 key={index}
-                                className="p-2 border-bottom"
+                                className="p-2"
                                 style={{
                                   backgroundColor:
                                     currentChatMember?.sender?.senderName ===
@@ -536,7 +536,7 @@ export default function App() {
                                         {senderName}
                                       </p>
                                       <p className="small text-muted">
-                                        {lastMessage}
+                                        {lastMessage.slice(0, 10) + "..."}
                                       </p>
                                     </div>
                                   </div>
@@ -654,7 +654,7 @@ export default function App() {
             {currentChatMember && (
               <MDBCol md="6" lg="6" xl="6">
                 <MDBCard style={{ minHeight: "100vh" }}>
-                  <div className="d-flex flex-row justify-content-center border-bottom">
+                  <div className="d-flex flex-row justify-content-center">
                     {/* <img
                       src={profile}
                       alt="avatar"
@@ -688,26 +688,38 @@ export default function App() {
                       </p>
                     </div>
                   </div>
-                  <MDBCardBody
-                    className="mt-1"
-                    style={{ height: "0px", overflowY: "auto" }}
-                    onScroll={handleChatScroll}
-                  >
-                    <div>
+                  {fileModal ? (
+                    <MDBCardBody className="mt-1">
+                      <MDBIcon
+                        className="d-flex align-self-center mt-3 me-3 float-end"
+                        fas
+                        size="lg"
+                        icon="close"
+                        style={{ color: "#3b71ca", cursor: "pointer" }}
+                        onClick={handleFileModalClose}
+                      />
+                      <div>File Name: {userData.fileName}</div>
+                    </MDBCardBody>
+                  ) : (
+                    <MDBCardBody
+                      className="mt-1 customScroll"
+                      onScroll={handleChatScroll}
+                    >
                       <div>
-                        <MDBTypography listUnStyled>
-                          <ul>
-                            {loading && <span>Loading</span>}
-                            <div ref={messagesTopRef} />
-                            {message?.map((chat, index) => (
-                              <>
-                                {chat.senderName !== userData.username ? (
-                                  <li
-                                    className="d-flex flex-row justify-content-start"
-                                    key={index}
-                                    ref={index === 2 ? messagesTopRef : {}}
-                                  >
-                                    {/* <img
+                        <div>
+                          <MDBTypography listUnStyled>
+                            <ul>
+                              {loading && <span>Loading</span>}
+                              <div ref={messagesTopRef} />
+                              {message?.map((chat, index) => (
+                                <>
+                                  {chat.senderName !== userData.username ? (
+                                    <li
+                                      className="d-flex flex-row justify-content-start"
+                                      key={index}
+                                      ref={index === 2 ? messagesTopRef : {}}
+                                    >
+                                      {/* <img
                                       src="https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-chat/ava6-bg.webp"
                                       alt="avatar 1"
                                       style={{
@@ -715,130 +727,130 @@ export default function App() {
                                         height: "100%",
                                       }}
                                     /> */}
-                                    <div>
-                                      <p className="small p-2 ms-3 mb-1 text-white bg-info bg-gradient bubble-left">
-                                        {chat.message}
-                                        {chat.fileUrl && (
-                                          <a
-                                            className="download-link"
-                                            href={chat.fileUrl}
-                                          >
-                                            <MDBIcon
-                                              fas
-                                              size="sm"
-                                              icon="download"
-                                              style={{
-                                                color: "white",
-                                              }}
-                                            />
-                                          </a>
-                                        )}
-                                      </p>
+                                      <div>
+                                        <p className="small p-2 ms-3 mb-1 text-white bg-secondary bg-gradient bubble-left">
+                                          {chat.message}
+                                          {chat.fileUrl && (
+                                            <a
+                                              className="download-link"
+                                              href={chat.fileUrl}
+                                            >
+                                              <MDBIcon
+                                                fas
+                                                size="sm"
+                                                icon="download"
+                                                style={{
+                                                  color: "white",
+                                                }}
+                                              />
+                                            </a>
+                                          )}
+                                        </p>
 
-                                      <p className="small ms-3 mb-3 rounded-3 text-muted float-end">
-                                        {chat.date}
-                                      </p>
-                                    </div>
-                                  </li>
-                                ) : (
-                                  <li
-                                    className="d-flex flex-row justify-content-end"
-                                    key={index}
-                                  >
-                                    <div>
-                                      <p className="small p-2 me-3 mb-1 text-white bg-primary bg-gradient bubble-right">
-                                        {chat.message}
-                                        {chat.fileUrl && (
-                                          <a
-                                            className="download-link"
-                                            href={chat.fileUrl}
-                                          >
-                                            <MDBIcon
-                                              fas
-                                              size="sm"
-                                              icon="download"
-                                              style={{
-                                                color: "white",
-                                              }}
-                                            />
-                                          </a>
-                                        )}
-                                        {chat.senderName ===
-                                          userData.username &&
-                                          chat.messageStatus ===
-                                            "DELIVERED" && (
-                                            <span className="text-muted float-end">
-                                              <MDBTooltip
-                                                tag="a"
-                                                wrapperProps={{
-                                                  href: "#",
+                                        <p className="small ms-3 mb-3 rounded-3 text-muted float-end">
+                                          {chat.date}
+                                        </p>
+                                      </div>
+                                    </li>
+                                  ) : (
+                                    <li
+                                      className="d-flex flex-row justify-content-end"
+                                      key={index}
+                                    >
+                                      <div>
+                                        <p className="small p-2 me-3 mb-1 text-white bg-primary bg-gradient bubble-right">
+                                          {chat.message}
+                                          {chat.fileUrl && (
+                                            <a
+                                              className="download-link"
+                                              href={chat.fileUrl}
+                                            >
+                                              <MDBIcon
+                                                fas
+                                                size="sm"
+                                                icon="download"
+                                                style={{
+                                                  color: "white",
                                                 }}
-                                                title="Sent"
-                                              >
-                                                <MDBIcon
-                                                  fas
-                                                  icon="check"
-                                                  size="xs"
-                                                  style={{
-                                                    color: "black",
-                                                    marginLeft: "1rem",
-                                                  }}
-                                                />
-                                              </MDBTooltip>
-                                            </span>
+                                              />
+                                            </a>
                                           )}
-                                        {chat.senderName ===
-                                          userData.username &&
-                                          chat.messageStatus === "READ" && (
-                                            <span className="text-muted float-end">
-                                              <MDBTooltip
-                                                tag="a"
-                                                wrapperProps={{
-                                                  href: "#",
-                                                }}
-                                                title="Read"
-                                              >
-                                                <MDBIcon
-                                                  fas
-                                                  icon="check-double"
-                                                  size="xs"
-                                                  style={{
-                                                    color: "white",
-                                                    marginLeft: "1rem",
+                                          {chat.senderName ===
+                                            userData.username &&
+                                            chat.messageStatus ===
+                                              "DELIVERED" && (
+                                              <span className="text-muted float-end">
+                                                <MDBTooltip
+                                                  tag="a"
+                                                  wrapperProps={{
+                                                    href: "#",
                                                   }}
-                                                />
-                                              </MDBTooltip>
-                                            </span>
-                                          )}
-                                        {chat.senderName ===
-                                          userData.username &&
-                                          chat.messageStatus === "UNREAD" && (
-                                            <span className="text-muted float-end">
-                                              <MDBTooltip
-                                                tag="a"
-                                                wrapperProps={{
-                                                  href: "#",
-                                                }}
-                                                title="Unread"
-                                              >
-                                                <MDBIcon
-                                                  fas
-                                                  icon="check"
-                                                  size="xs"
-                                                  style={{
-                                                    color: "white",
-                                                    marginLeft: "1rem",
+                                                  title="Sent"
+                                                >
+                                                  <MDBIcon
+                                                    fas
+                                                    icon="check"
+                                                    size="xs"
+                                                    style={{
+                                                      color: "black",
+                                                      marginLeft: "1rem",
+                                                    }}
+                                                  />
+                                                </MDBTooltip>
+                                              </span>
+                                            )}
+                                          {chat.senderName ===
+                                            userData.username &&
+                                            chat.messageStatus === "READ" && (
+                                              <span className="text-muted float-end">
+                                                <MDBTooltip
+                                                  tag="a"
+                                                  wrapperProps={{
+                                                    href: "#",
                                                   }}
-                                                />
-                                              </MDBTooltip>
-                                            </span>
-                                          )}
-                                      </p>
-                                      <p className="small me-3 mb-3 rounded-3 text-muted">
-                                        {chat.date}
-                                      </p>
-                                    </div>
-                                    {/* <img
+                                                  title="Read"
+                                                >
+                                                  <MDBIcon
+                                                    fas
+                                                    icon="check-double"
+                                                    size="xs"
+                                                    style={{
+                                                      color: "white",
+                                                      marginLeft: "1rem",
+                                                    }}
+                                                  />
+                                                </MDBTooltip>
+                                              </span>
+                                            )}
+                                          {chat.senderName ===
+                                            userData.username &&
+                                            chat.messageStatus === "UNREAD" && (
+                                              <span className="text-muted float-end">
+                                                <MDBTooltip
+                                                  tag="a"
+                                                  wrapperProps={{
+                                                    href: "#",
+                                                  }}
+                                                  title="Unread"
+                                                >
+                                                  <MDBIcon
+                                                    fas
+                                                    icon="check"
+                                                    size="xs"
+                                                    style={{
+                                                      color: "white",
+                                                      marginLeft: "1rem",
+                                                    }}
+                                                  />
+                                                </MDBTooltip>
+                                              </span>
+                                            )}
+                                        </p>
+                                        <p className="small me-3 mb-3 rounded-3 text-muted">
+                                          {chat.date}
+                                        </p>
+                                      </div>
+                                      {/* <img
                                       src="https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-chat/ava1-bg.webp"
                                       alt="avatar 1"
                                       style={{
@@ -846,46 +858,20 @@ export default function App() {
                                         height: "100%",
                                       }}
                                     /> */}
-                                  </li>
-                                )}
-                              </>
-                            ))}
-                          </ul>
+                                    </li>
+                                  )}
+                                </>
+                              ))}
+                            </ul>
 
-                          <div ref={messagesEndRef} />
-                        </MDBTypography>
+                            <div ref={messagesEndRef} />
+                          </MDBTypography>
+                        </div>
                       </div>
+                    </MDBCardBody>
+                  )}
 
-                      {/* <div className="text-muted d-flex justify-content-start align-items-center pe-3 pt-3 mt-2">
-                                <form
-                                  onSubmit={handleSendMessage}
-                                  style={{ width: "100%", display: "flex" }}
-                                >
-                                  
-                                  <MDBTextArea
-                                    label="Message"
-                                    id="textAreaExample"
-                                    rows={4}
-                                    value={userData.message}
-                                    onChange={handleMessage}
-                                  />
-                                  <input
-                                    type={"file"}
-                                    onChange={handleFile}
-                                    className="ms-1 text-muted"
-                                  />
-                                  <a className="ms-3" href="#!">
-                                    <MDBIcon
-                                      fas
-                                      icon="paper-plane"
-                                      onClick={handleSendMessage}
-                                    />
-                                  </a>
-                                </form>
-                              </div> */}
-                    </div>
-                  </MDBCardBody>
-                  <div className="text-muted d-flex justify-content-start align-items-center pe-3 pt-3 mt-2 footer mb-3">
+                  <div className="text-muted d-flex justify-content-start align-items-center pe-3 pt-3 mt-2 mb-3">
                     <input
                       type="text"
                       className="form-control form-control-lg"
@@ -942,19 +928,12 @@ export default function App() {
                     />
                   </MDBInputGroup>
                 </div>
-                <MDBCardBody
-                  className="m-3 border"
-                  style={{
-                    height: "0px",
-                    overflowY: "auto",
-                    borderRadius: "0.5rem",
-                  }}
-                >
+                <MDBCardBody className="m-3 customScroll">
                   {searchedUsers && (
-                    <MDBTypography listUnStyled className="mb-4">
+                    <MDBTypography listUnStyled className="mb-0">
                       <ul className="chat-persons">
                         {searchedUsers?.map((name, index) => (
-                          <li className="p-2 border-bottom" key={index}>
+                          <li className="p-2" key={index}>
                             <div
                               className="d-flex justify-content-between"
                               onClick={() => {

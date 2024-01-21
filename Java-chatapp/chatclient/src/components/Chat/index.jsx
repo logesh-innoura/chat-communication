@@ -454,7 +454,7 @@ export default function App() {
           style={{ backgroundColor: "#fff", minHeight: "100vh" }}
         >
           <MDBRow>
-            <MDBCol md="3" lg="3" xl="3" className="mb-4 mb-md-0">
+            <MDBCol md="3" lg="3" xl="3" className="mb-4 mb-md-0 p-0">
               <MDBCard style={{ minHeight: "100vh" }}>
                 <div className="mt-3 border-bottom">
                   <h5 className="font-weight-bold mb-3 text-center">
@@ -652,7 +652,7 @@ export default function App() {
               </MDBCol>
             )}
             {currentChatMember && (
-              <MDBCol md="6" lg="6" xl="6">
+              <MDBCol md="6" lg="6" xl="6" className="p-0">
                 <MDBCard style={{ minHeight: "100vh" }}>
                   <div className="d-flex flex-row justify-content-center">
                     {/* <img
@@ -906,7 +906,7 @@ export default function App() {
               </MDBCol>
             )}
 
-            <MDBCol md="3" lg="3" xl="3" className="mb-4 mb-md-0">
+            <MDBCol md="3" lg="3" xl="3" className="mb-4 mb-md-0 p-0">
               <MDBCard style={{ minHeight: "100vh" }}>
                 <div className="mt-3 border-bottom">
                   <h5 className="font-weight-bold mb-3 text-center">

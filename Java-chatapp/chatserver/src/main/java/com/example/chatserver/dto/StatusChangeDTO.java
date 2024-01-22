@@ -14,6 +14,8 @@ import java.util.List;
 @AllArgsConstructor
 public class StatusChangeDTO
 {
+    private String primaryUser;
+    private String secondaryUser;
     List<String> messageIds;
     MessageStatus messageStatus;
 }

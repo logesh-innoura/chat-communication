@@ -120,7 +120,7 @@ public class DataController {
     @PostMapping("/change/status")
     public void changeStatus(@RequestBody StatusChangeDTO statusChangeDTO)
     {
-        messageService.markMessagesStatus(statusChangeDTO.getMessageIds(), statusChangeDTO.getMessageStatus());
+        messageService.markMessagesStatus(statusChangeDTO);
     }
 
     @GetMapping("/get/history") // while starting or opening the screen call this api and show the users with message. //TODO the bug is there if loading the first time get this response

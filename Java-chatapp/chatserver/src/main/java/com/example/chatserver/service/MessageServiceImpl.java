@@ -4,6 +4,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
+import com.example.chatserver.dto.MessageReadStatusDTO;
+import com.example.chatserver.dto.StatusChangeDTO;
 import com.example.chatserver.dto.UnreadMessageCountDTO;
 import com.example.chatserver.model.ChatUsersHistory;
 import com.example.chatserver.model.MessageStatus;
@@ -124,13 +126,31 @@ public class MessageServiceImpl implements MessageService {
         return mongoMessageRepository.findBySenderNameAndReceiverNameOrSenderNameAndReceiverNameOrderByTimeStampDesc(sender, receiver, receiver, sender, pageable);
     }
 
+    /*
+    * Mark the messages ids to the particular status.
+    * in status change dto primaryUser is who read the messages.
+    * Secondary User is who sent the message.
+    * so once read from the primary user, the other end, that means who sent the message that user will know that messages are read.
+    * that's why need to intimate using socket to the secondary user(who sent message), and create the MessageReadStatusDTO.
+    * In MessageReadStatusDTO the primary user is who sent the message.
+    * And the secondary user is who read the message.
+    * and sent the list of read messages ids.
+     */
     @Override
-    public void markMessagesStatus(List<String> messageIds, MessageStatus messageStatus) {
-        List<Message> messages = mongoMessageRepository.findByIdIn(messageIds);
-        messages.forEach(message -> message.setMessageStatus(messageStatus));
+    public void markMessagesStatus(StatusChangeDTO statusChangeDTO)
+    {
+
+        List<Message> messages = mongoMessageRepository.findByIdIn(statusChangeDTO.getMessageIds());
+        messages.forEach(message -> message.setMessageStatus(statusChangeDTO.getMessageStatus()));
+        MessageReadStatusDTO messageReadStatusDTO = new MessageReadStatusDTO();
+        messageReadStatusDTO.setReadMessageIDs(statusChangeDTO.getMessageIds());
+        messageReadStatusDTO.setPrimaryUser(messageReadStatusDTO.getSecondaryUser());
+        messageReadStatusDTO.setSecondaryUser(messageReadStatusDTO.getPrimaryUser());
         if (!messages.isEmpty()) {
             mongoMessageRepository.saveAll(messages);
+            simpMessagingTemplate.convertAndSendToUser(statusChangeDTO.getSecondaryUser(), "/topic", messageReadStatusDTO);
         }
     }
+
 
 }

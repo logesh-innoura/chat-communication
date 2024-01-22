@@ -14,7 +14,7 @@ public interface MessageService {
 
     List<Message> getAllMessagesForUser(String username);
 
-    Message save(Message employee);
+    Message save(Message message);
 
     void deleteByID(String id);
 

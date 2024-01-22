@@ -25,6 +25,7 @@ public class Message implements Cloneable {
     private String date;
     private Status status;
     private String fileUrl;
+    private String fileType;
     private MessageStatus messageStatus;
     @CreatedDate
     private Instant timeStamp;

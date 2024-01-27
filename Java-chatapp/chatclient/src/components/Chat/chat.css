@@ -1,100 +1,127 @@
 .chat-persons li:hover {
-    background-color: rgb(235, 232, 232);
-    cursor: pointer;
+  background-color: rgb(235, 232, 232);
+  cursor: pointer;
 }
-.search {
-    background-color: rgb(249 244 244);;
-    padding: 16px 11px;
-    border-radius: 5px;
-    border: none;
-    outline: none;
+.search, .searchByMessage {
+  background-color: rgb(244, 244, 244);
+  padding: 16px 11px;
+  border-radius: 5px;
+  border: none;
+  outline: none;
+  min-height: 3rem !important;
+}
+.chatMembers {
+width: 50%;
+height: 100%;
+overflow-y: auto;
+}
+.searchByMessage {
+min-height: 2.7rem !important;
 }
 .card-body {
-    padding-top: 0 !important;}
-    .download-link {
-        padding-left: 10px;
+  padding-top: 0 !important;}
+  .download-link {
+      padding-left: 10px;
+  }
+  .footer{
+      border-top: 1px solid lightgray;
+  }
+
+  .bubble-right {
+      position: relative;
+      border-radius: 5px 0 5px 5px;
     }
-    .footer{
-        border-top: 1px solid lightgray;
+    
+    .bubble-right:after {
+      content: '';
+      position: absolute;
+      left: 100%;
+      top: 0;
+      border-top: 8px solid #4a7cce;
+      border-right: 12px solid transparent;
     }
 
-    .bubble-right {
-        position: relative;
-        border-radius: 5px 0 5px 5px;
-      }
-      
-      .bubble-right:after {
-        content: '';
-        position: absolute;
-        left: 100%;
-        top: 0;
-        border-top: 8px solid #4a7cce;
-        border-right: 12px solid transparent;
-      }
+    .bubble-left {
+      position: relative;
+      border-radius: 0px 5px 5px 5px;
+    }
 
-      .bubble-left {
-        position: relative;
-        border-radius: 0px 5px 5px 5px;
-      }
+    .bubble-left:before {
+      content: '';
+      position: absolute;
+      right: 100%;
+      top: 0;
+      border-top: 8px solid #a5acb7;
+      border-left: 12px solid transparent;
+    }
 
-      .bubble-left:before {
-        content: '';
-        position: absolute;
-        right: 100%;
-        top: 0;
-        border-top: 8px solid #a5acb7;
-        border-left: 12px solid transparent;
-      }
-
-      /* scrollbar.css */
+    /* scrollbar.css */
 
 /* Default (light) theme */
 :root {
-	--scrollbar-track: transparent;
-	--scrollbar-thumb: rgb(155, 155, 155);
-	--scrollbar-thumb-hover: grey;
-	--scrollbar-width: 3px;
+--scrollbar-track: transparent;
+--scrollbar-thumb: rgb(155, 155, 155);
+--scrollbar-thumb-hover: grey;
+--scrollbar-width: 3px;
 }
 /* Default (light) theme */
 
 /* Firefox */
 * {
-	scrollbar-width: thin; /* none | auto  */
-	scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+scrollbar-width: thin; /* none | auto  */
+scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 /* Firefox */
 
 /* Chrome, Edge, Safari */
 *::-webkit-scrollbar {
-	width: var(--scrollbar-width); /* vertical scrollbar */
-	height: var(--scrollbar-width); /* horizontal scrollbar */
+width: var(--scrollbar-width); /* vertical scrollbar */
+height: var(--scrollbar-width); /* horizontal scrollbar */
 }
 
 
 *::-webkit-scrollbar:hover {
-	width: var(--scrollbar-width); /* vertical scrollbar */
-	height: var(--scrollbar-width); /* horizontal scrollbar */
+width: var(--scrollbar-width); /* vertical scrollbar */
+height: var(--scrollbar-width); /* horizontal scrollbar */
 }
 
 *::-webkit-scrollbar-track {
-	background: var(--scrollbar-track);
+background: var(--scrollbar-track);
 }
 
 *::-webkit-scrollbar-thumb {
-	background: var(--scrollbar-thumb);
-	border-radius: var(--scrollbar-width);
-	border: calc(var(--scrollbar-width) / 4) solid var(--page-background);
+background: var(--scrollbar-thumb);
+border-radius: var(--scrollbar-width);
+border: calc(var(--scrollbar-width) / 4) solid var(--page-background);
 }
 
 *::-webkit-scrollbar-thumb:hover {
-	background: var(--scrollbar-thumb-hover);
+background: var(--scrollbar-thumb-hover);
 }
 /* Chrome, Edge, Safari */
 
 .customScroll {
-    height: 0px;
-    overflow-y: hidden;
+  height: 0px;
+  overflow-y: hidden;
 }
 .customScroll:hover {
-    overflow-y: auto;
+  overflow-y: auto;
+}
+
+.custom-send {
+  position: relative;
+  width: 100%;
+}
+.custom-send-input {
+  width: 100%;
+  padding-right: 100px !important; 
+  box-sizing: border-box;
+}
+.custom-send-btn {
+  position: absolute;
+  right: 3px; 
+  top: 3px;
+  bottom: 3px;
+  line-height: 1 !important;
+  z-index: 4;
 }

@@ -6,7 +6,8 @@ import ListGroup from "react-bootstrap/ListGroup";
 import Form from "react-bootstrap/Form";
 import _ from "lodash";
 import SockJS from "sockjs-client";
-import profile from "../../assets/user-profile-default.png";
+import profile from "../../assets/profile.jpeg";
+import chatProfile from "../../assets/profile.jpeg";
 import { ToastContainer, toast } from "react-toastify";
 
 import "./chat.css";
@@ -19,7 +20,7 @@ import {
   MDBIcon,
   MDBBtn,
   MDBTypography,
-  MDBTextArea,
+  MDBBadge,
   MDBCardHeader,
   MDBInputGroup,
   MDBTooltip,
@@ -70,13 +71,12 @@ export default function App() {
   }, [message, chatAction]);
   const fetchChatHistory = async (username) => {
     try {
-      const response = await fetch(
-        "http://13.68.177.51:8087/api/get/history?receiver=" + username
-      );
-      const data = await response.json();
-
-      setMessagedMembersList(data);
-      setSearchedInMembersList(data);
+      fetch("http://13.68.177.51:8087/api/get/history?receiver=" + username)
+        .then((response) => response.json())
+        .then((data) => {
+          setMessagedMembersList(data);
+          setSearchedInMembersList(data);
+        });
     } catch (error) {
       console.error("Error fetching chat history:", error);
     }
@@ -212,7 +212,8 @@ export default function App() {
       stompClient === null &&
       connectingFunction();
   }, [users, userData]);
-  const handleSendMessage = () => {
+  const handleSendMessage = (e) => {
+    e.preventDefault();
     if (userData.message === "") {
       return;
     }
@@ -223,6 +224,8 @@ export default function App() {
         message: userData.message,
         messageStatus: "DELIVERED",
         fileUrl: userData.fileUrl,
+        fileName: userData.fileName,
+        fileType: userData.fileType,
         date: getCurrentTimestamp(),
         status: "MESSAGE",
       };
@@ -238,9 +241,16 @@ export default function App() {
           message: "",
           fileUrl: "",
           fileName: "",
+          fileType: "",
         });
       } else {
-        setUserData({ ...userData, message: "", fileUrl: "", fileName: "" });
+        setUserData({
+          ...userData,
+          message: "",
+          fileUrl: "",
+          fileName: "",
+          fileType: "",
+        });
       }
       if (
         currentChatMember !== null &&
@@ -311,13 +321,13 @@ export default function App() {
       } else {
         setMessages([...privateMessages, ...message]);
       }
-      handleResetReadHistory(privateMessages);
+      handleResetReadHistory(privateMessages, sender);
       setLoading(false);
     } catch (error) {
       console.error("Error fetching user messages:", error);
     }
   };
-  const handleResetReadHistory = async (privateMessages) => {
+  const handleResetReadHistory = async (privateMessages, sender) => {
     const messageIds = [];
     privateMessages.map((msg) => {
       if (msg.messageStatus === "UNREAD") {
@@ -329,7 +339,12 @@ export default function App() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ messageIds: messageIds, messageStatus: "READ" }),
+      body: JSON.stringify({
+        messageIds: messageIds,
+        messageStatus: "READ",
+        primaryUser: userData.username,
+        secondaryUser: sender.receiverName,
+      }),
     });
   };
   const onTabChange = (name, index, sender) => {
@@ -366,6 +381,7 @@ export default function App() {
           "http://13.68.177.51:8087/api/uploadFile",
           {
             method: "POST",
+
             body: formData,
           }
         );
@@ -377,6 +393,7 @@ export default function App() {
           ...userData,
           fileUrl: result.response.fileUploadedUrl,
           fileName: file.name,
+          fileType: file.type,
           message: file.name
             ? userData.message + `(file:${file.name})`
             : userData.message,
@@ -479,6 +496,13 @@ export default function App() {
     setUserData({ ...userData, message: "", fileUrl: "", fileName: "" });
   };
 
+  const handleKeypress = (e) => {
+    //it triggers by pressing the enter key
+    if (e.keyCode === 13) {
+      handleSendMessage();
+    }
+  };
+
   return (
     <>
       <ToastContainer />
@@ -492,29 +516,30 @@ export default function App() {
             <MDBCol md="3" lg="3" xl="3" className="mb-4 mb-md-0 p-0">
               <MDBCard style={{ minHeight: "100vh" }}>
                 <div className="mt-3 border-bottom">
-                  <h5 className="font-weight-bold mb-3 text-center">
-                    Messages
+                  <h5 className="font-weight-bold mb-2 d-flex">
+                    <MDBIcon
+                      className="d-flex align-self-center m-0 p-2"
+                      fas
+                      size="1x"
+                      icon="comment-alt"
+                      style={{ color: "#2164c8" }}
+                    />{" "}
+                    Chat
                   </h5>
                 </div>
                 {messagedMembersList && (
-                  <div className="p-3">
-                    <h6 className="mb-4">
-                      {"Chat List "}
-                      <span className="badge bg-danger">
-                        {messagedMembersList.length}
-                      </span>
-                    </h6>
-                    <MDBInputGroup className="rounded">
+                  <div className="p-1">
+                    <MDBInputGroup className="rounded p-0">
                       <input
-                        className="form-control rounded search"
-                        placeholder="Search messages"
+                        className="form-control rounded search m-1"
+                        placeholder="Search members"
                         type="search"
                         onChange={handleSearchMembers}
                       />
                     </MDBInputGroup>
                   </div>
                 )}
-                <MDBCardBody className="m-3 customScroll">
+                <MDBCardBody className="m-0 p-1 customScroll">
                   {messagedMembersList ? (
                     <MDBTypography listUnStyled className="mb-0">
                       {searchedInMembersList && (
@@ -553,20 +578,20 @@ export default function App() {
                               >
                                 <div className="d-flex justify-content-between">
                                   <div className="d-flex flex-row">
-                                    {/* <img
-                                      src={profile}
-                                      alt="avatar"
-                                      className="d-flex align-self-center me-3 shadow-1-strong"
-                                      width="50"
-                                    /> */}
-                                    <MDBIcon
-                                      className="d-flex align-self-center me-3"
-                                      fas
-                                      size="3x"
-                                      icon="user-circle"
-                                      style={{ color: "#3b71ca" }}
-                                    />
-                                    <div className="pt-1">
+                                    {
+                                      <img
+                                        src={profile}
+                                        alt="avatar"
+                                        // className="d-flex align-self-center me-3 shadow-1-strong"
+                                        className="rounded-4 shadow-4"
+                                        style={{
+                                          width: "50px",
+                                          height: "50px",
+                                        }}
+                                      />
+                                    }
+
+                                    <div className="pt-1 ms-3">
                                       <p className="fw-bold mb-0">
                                         {senderName}
                                       </p>
@@ -623,64 +648,138 @@ export default function App() {
             {!currentChatMember && (
               <MDBCol md="6" lg="6" xl="6" className="p-0">
                 <div>
-                  <h4 style={{ padding: "9px" }}>Recent Chats</h4>
+                  <MDBInputGroup className="rounded p-1">
+                    <input
+                      className="form-control rounded searchByMessage m-1"
+                      placeholder="Search Message"
+                      type="search"
+                      onChange={() => {}}
+                    />
+                  </MDBInputGroup>
                   {messagedMembersList && (
-                    <div className="chatMembers">
-                      {searchedInMembersList && (
-                        <ListGroup as="ol" className="mt-2">
-                          {searchedInMembersList?.map(
-                            (
-                              {
-                                senderName,
-                                unreadCount,
-                                lastMessage,
-                                lastMessageTimeStamp,
-                              },
-                              index
-                            ) => (
-                              <ListGroup.Item
-                                as="li"
-                                key={senderName}
-                                className={`d-flex justify-content-between align-items-start ${
-                                  currentChatMember?.sender?.senderName ===
-                                    senderName && "active"
-                                }`}
-                              >
-                                <div
-                                  onClick={() => {
-                                    onTabChange(
-                                      senderName,
-                                      index,
-                                      searchedInMembersList[index]
-                                    );
-                                  }}
-                                  className="ms-2"
-                                  style={{ width: "100%" }}
+                    <div className="d-flex">
+                      <div className="chatMembers">
+                        <h6>At Work ({searchedInMembersList.length})</h6>
+                        {searchedInMembersList && (
+                          <ListGroup as="ol" className="mt-2">
+                            {searchedInMembersList?.map(
+                              (
+                                {
+                                  senderName,
+                                  unreadCount,
+                                  lastMessage,
+                                  lastMessageTimeStamp,
+                                },
+                                index
+                              ) => (
+                                <ListGroup.Item
+                                  as="li"
+                                  key={senderName}
+                                  className={`d-flex justify-content-between align-items-start ${
+                                    currentChatMember?.sender?.senderName ===
+                                      senderName && "active"
+                                  }`}
                                 >
-                                  <div className="fw-bold">
-                                    {senderName}
-                                    {unreadCount > 0 && (
-                                      <sup>
-                                        <Badge bg="success" pill>
-                                          {unreadCount}
-                                        </Badge>
-                                      </sup>
-                                    )}
-                                  </div>
-                                  <span>{lastMessage}</span>
+                                  <div
+                                    onClick={() => {
+                                      onTabChange(
+                                        senderName,
+                                        index,
+                                        searchedInMembersList[index]
+                                      );
+                                    }}
+                                    className="d-flex flex-row"
+                                    style={{ width: "100%" }}
+                                  >
+                                    {
+                                      <img
+                                        src={profile}
+                                        alt="avatar"
+                                        // className="d-flex align-self-center me-3 shadow-1-strong"
+                                        className="rounded-4 shadow-4"
+                                        style={{
+                                          width: "50px",
+                                          height: "50px",
+                                        }}
+                                      />
+                                    }
+                                    <div className="ms-3">
+                                      <div className="fw-bold d-block">
+                                        {senderName}
+                                      </div>
 
-                                  <p className="small text-muted mb-1">
-                                    <TimeAgo
-                                      date={lastMessageTimeStamp}
-                                      minPeriod={60}
-                                    />
-                                  </p>
-                                </div>
-                              </ListGroup.Item>
-                            )
-                          )}
-                        </ListGroup>
-                      )}
+                                      <p className="small text-muted mb-1 d-block">
+                                        Analyst
+                                      </p>
+                                    </div>
+                                  </div>
+                                </ListGroup.Item>
+                              )
+                            )}
+                          </ListGroup>
+                        )}
+                      </div>
+                      <div className="chatMembers">
+                        <h6>Away ({searchedInMembersList.length})</h6>
+                        {searchedInMembersList && (
+                          <ListGroup as="ol" className="mt-2">
+                            {searchedInMembersList?.map(
+                              (
+                                {
+                                  senderName,
+                                  unreadCount,
+                                  lastMessage,
+                                  lastMessageTimeStamp,
+                                },
+                                index
+                              ) => (
+                                <ListGroup.Item
+                                  as="li"
+                                  key={senderName}
+                                  className={`d-flex justify-content-between align-items-start ${
+                                    currentChatMember?.sender?.senderName ===
+                                      senderName && "active"
+                                  }`}
+                                >
+                                  <div
+                                    onClick={() => {
+                                      onTabChange(
+                                        senderName,
+                                        index,
+                                        searchedInMembersList[index]
+                                      );
+                                    }}
+                                    className="d-flex flex-row"
+                                    style={{ width: "100%" }}
+                                  >
+                                    {
+                                      <img
+                                        src={profile}
+                                        alt="avatar"
+                                        // className="d-flex align-self-center me-3 shadow-1-strong"
+                                        className="rounded-4 shadow-4"
+                                        style={{
+                                          width: "50px",
+                                          height: "50px",
+                                        }}
+                                      />
+                                    }
+                                    <div className="ms-3">
+                                      <div className="fw-bold d-block">
+                                        {senderName}
+                                      </div>
+
+                                      <p className="small text-muted mb-1 d-block">
+                                        Analyst
+                                      </p>
+                                    </div>
+                                  </div>
+                                </ListGroup.Item>
+                              )
+                            )}
+                          </ListGroup>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -689,26 +788,39 @@ export default function App() {
             {currentChatMember && (
               <MDBCol md="6" lg="6" xl="6" className="p-0">
                 <MDBCard style={{ minHeight: "100vh" }}>
-                  <div className="d-flex flex-row justify-content-center">
-                    {/* <img
-                      src={profile}
-                      alt="avatar"
-                      className="d-flex align-self-center me-3 shadow-1-strong"
-                      width="40"
-                    /> */}
-                    <MDBIcon
-                      className="d-flex align-self-center me-3"
-                      fas
-                      size="3x"
-                      icon="user-circle"
-                      style={{ color: "#3b71ca" }}
-                    />
-                    <div className="pt-1">
+                  <div className="p-1">
+                    <div className="d-flex flex-row border-bottom p-0">
+                      <MDBInputGroup className="rounded p-0">
+                        <input
+                          className="form-control rounded search m-1"
+                          placeholder="Search Messages"
+                          type="search"
+                          onChange={() => {}}
+                        />
+                      </MDBInputGroup>
+                    </div>
+                  </div>
+
+                  <div className="d-flex flex-row border-bottom p-1">
+                    {
+                      <img
+                        src={chatProfile}
+                        alt="avatar"
+                        // className="d-flex align-self-center me-3 shadow-1-strong float-start"
+                        className="rounded-4 shadow-4"
+                        style={{ width: "50px", height: "50px" }}
+                      />
+                    }
+
+                    <div
+                      className="ms-3 pt-2 float-start"
+                      style={{ width: "60%" }}
+                    >
                       <p className="fw-bold mb-0">
                         {currentChatMember?.sender?.senderName}
                       </p>
-                      <p className="small text-muted">
-                        <span className="text-muted float-start">
+                      <p className="small text-muted m-0">
+                        <span className="text-muted float-start m-0 p-0">
                           <MDBIcon
                             fas
                             size="xs"
@@ -719,10 +831,21 @@ export default function App() {
                             }}
                           />
                         </span>
-                        Online
+                        Available
                       </p>
                     </div>
+                    <div className="float-end" style={{ width: "30%" }}>
+                      <MDBIcon
+                        className="d-flex align-self-center mt-3 me-3 float-end"
+                        fas
+                        size="lg"
+                        icon="close"
+                        style={{ color: "#3b71ca", cursor: "pointer" }}
+                        onClick={() => setCurrentChatMember(null)}
+                      />
+                    </div>
                   </div>
+
                   {fileModal ? (
                     <MDBCardBody className="mt-1 border">
                       <div className="mt-2 p-2 text-center">
@@ -931,46 +1054,60 @@ export default function App() {
                       </div>
                     </MDBCardBody>
                   )}
-
-                  <div className="text-muted d-flex justify-content-start align-items-center pe-3 pt-3 mt-2 mb-3 ms-3">
-                    <input
-                      type="text"
-                      className="form-control form-control-lg"
-                      id="exampleFormControlInput2"
-                      placeholder="Type message"
-                      value={userData.message}
-                      onChange={handleMessage}
-                    />
-                    <label className="ms-3" htmlFor="fileAdd">
-                      <MDBIcon
-                        fas
-                        icon="link"
-                        style={{ color: "#3b71ca", cursor: "pointer" }}
+                  <form>
+                    <div className="text-muted d-flex justify-content-start align-items-center pe-3 pt-3 mt-2 mb-3 ms-3">
+                      <label className="me-3" htmlFor="fileAdd">
+                        <MDBIcon
+                          fas
+                          icon="link"
+                          style={{ color: "#3b71ca", cursor: "pointer" }}
+                        />
+                      </label>
+                      <input
+                        type={"file"}
+                        onChange={handleFile}
+                        id="fileAdd"
+                        style={{ display: "none" }}
+                        className="ms-1 text-muted"
                       />
-                    </label>
+                      <input
+                        type="text"
+                        className="form-control form-control-lg"
+                        id="exampleFormControlInput2"
+                        placeholder="Type message"
+                        value={userData.message}
+                        onChange={handleMessage}
+                        onKeyPress={handleKeypress}
+                      />
 
-                    <input
-                      type={"file"}
-                      onChange={handleFile}
-                      id="fileAdd"
-                      style={{ display: "none" }}
-                      className="ms-1 text-muted"
-                    />
-
-                    {/* <label for="image">
+                      {/* <label for="image">
                           <input type="file" name="image" id="image" style={{display: 'none'}}
                                     onChange={handleFile}/>
                           <img src={profile} width={20}/>
                       </label> */}
+                      <button
+                        onClick={handleSendMessage}
+                        // ref={node => (this.btn = node)}
+                        type="submit"
+                        style={{ border: "none", background: 'white' }}
+                        className="ms-3"
+                      >
+                        <MDBIcon
+                          fas
+                          icon="paper-plane"
+                          style={{ color: "#3b71ca", cursor: "pointer" }}
+                        />
+                      </button>
 
-                    <a className="ms-3" onClick={handleSendMessage}>
-                      <MDBIcon
-                        fas
-                        icon="paper-plane"
-                        style={{ color: "#3b71ca", cursor: "pointer" }}
-                      />
-                    </a>
-                  </div>
+                      {/* <a className="ms-3" onClick={handleSendMessage}>
+                        <MDBIcon
+                          fas
+                          icon="paper-plane"
+                          style={{ color: "#3b71ca", cursor: "pointer" }}
+                        />
+                      </a> */}
+                    </div>
+                  </form>
                 </MDBCard>
               </MDBCol>
             )}
@@ -982,14 +1119,15 @@ export default function App() {
                     Welcome {userData.username}
                   </h5>
                 </div>
-                <div className="p-3">
-                  <h6 className="mb-4">
-                    {"Team Members "}
-                    <span className="badge bg-danger">{users.length}</span>
+                <div className="p-2">
+                  <h6 className="mb-2">
+                    {"Team Members:"}
+                    {/* <span className="badge bg-danger">{users.length}</span> */}
+                    <MDBBadge className="ms-2">{users.length}</MDBBadge>
                   </h6>
                   <MDBInputGroup className="rounded">
                     <input
-                      className="form-control rounded search"
+                      className="form-control rounded search m-0"
                       placeholder="Search a new user"
                       type="search"
                       value={userData.searchNewUserMessage}
@@ -997,7 +1135,7 @@ export default function App() {
                     />
                   </MDBInputGroup>
                 </div>
-                <MDBCardBody className="m-3 customScroll">
+                <MDBCardBody className="m-0 p-1 customScroll">
                   {searchedUsers && (
                     <MDBTypography listUnStyled className="mb-0">
                       <ul className="chat-persons">
@@ -1010,21 +1148,38 @@ export default function App() {
                               }}
                             >
                               <div className="d-flex flex-row">
-                                {/* <img
-                                  src={profile}
-                                  alt="avatar"
-                                  className="d-flex align-self-center me-3 shadow-1-strong"
-                                  width="50"
-                                /> */}
-                                <MDBIcon
-                                  className="d-flex align-self-center me-3"
-                                  fas
-                                  size="3x"
-                                  icon="user-circle"
-                                  style={{ color: "#3b71ca" }}
-                                />
-                                <div className="pt-1">
-                                  <p className="fw-bold mb-0">{name}</p>
+                                {
+                                  <div className="d-inline-flex position-relative">
+                                    <MDBBadge className="position-absolute top-0 start-100 translate-middle p-1 bg-success border border-light rounded-circle">
+                                      <span className="visually-hidden">
+                                        New alerts
+                                      </span>
+                                    </MDBBadge>
+                                    <img
+                                      src={profile}
+                                      alt="avatar"
+                                      // className="d-flex align-self-center me-3 shadow-1-strong"
+                                      className="rounded-4 shadow-4"
+                                      style={{ width: "50px", height: "50px" }}
+                                    />
+                                  </div>
+                                }
+                                <div className="pt-1 ms-3">
+                                  <p className="fw-bold mb-0">
+                                    {name}
+                                    {/* <sup>
+                                      <MDBIcon
+                                        fas
+                                        size="xs"
+                                        icon="circle"
+                                        className="ms-1"
+                                        style={{
+                                          color: "#53c44d",
+                                          marginRight: "0.5rem",
+                                        }}
+                                      />
+                                    </sup> */}
+                                  </p>
                                   <p className="small text-muted">
                                     Designation
                                   </p>
@@ -1051,7 +1206,7 @@ export default function App() {
             onChange={handleUsername}
             margin="normal"
           />
-          <button type="button" onClick={registerUser}>
+          <button className="connect-button" type="button" onClick={registerUser}>
             connect
           </button>
         </div>

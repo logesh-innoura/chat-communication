@@ -14,7 +14,7 @@ input {
   padding: 10px;
   font-size: 1.2em;
 }
-button{
+.connect-button{
   border: none;
   padding: 10px;
   background: green;

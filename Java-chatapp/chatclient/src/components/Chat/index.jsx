@@ -6,8 +6,8 @@ import ListGroup from "react-bootstrap/ListGroup";
 import Form from "react-bootstrap/Form";
 import _ from "lodash";
 import SockJS from "sockjs-client";
-import profile from "../../assets/profile2.jfif";
-import chatProfile from "../../assets/chatOnline.jfif";
+import profile from "../../assets/user1.png";
+import chatProfile from "../../assets/user.png";
 import { ToastContainer, toast } from "react-toastify";
 
 import "./chat.css";
@@ -24,6 +24,15 @@ import {
   MDBCardHeader,
   MDBInputGroup,
   MDBTooltip,
+  MDBNavbar,
+  MDBNavbarNav,
+  MDBNavbarItem,
+  MDBNavbarLink,
+  MDBNavbarBrand,
+  MDBDropdown,
+  MDBDropdownToggle,
+  MDBDropdownItem,
+  MDBDropdownMenu,
 } from "mdb-react-ui-kit";
 
 let stompClient = null;
@@ -64,12 +73,15 @@ export default function App() {
     if (message && chatAction === "load") {
       scrollToBottom();
     } else if (message && chatAction === "add") {
-      scrollToTop();
+      // scrollToTop();
     }
   }, [message, chatAction]);
   const fetchChatHistory = async (username) => {
     try {
-      fetch("http://13.68.177.51:8087/api/get/history?receiver=" + username)
+      fetch(
+        "http://13.68.177.51:8087/chatservice/api/get/history?receiver=" +
+          username
+      )
         .then((response) => response.json())
         .then((data) => {
           setMessagedMembersList(data);
@@ -100,12 +112,14 @@ export default function App() {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch("http://13.68.177.51:8087/api/users");
+      const response = await fetch(
+        "http://13.68.177.51:8087/chatservice/api/users"
+      );
       const data = await response.json();
 
       const temp = [];
       data.forEach((item) => {
-        temp.push(item.name);
+        temp.push(item);
       });
       setUsers(temp);
       setSearchedUsers(temp);
@@ -113,9 +127,8 @@ export default function App() {
       console.error("Error fetching users:", error);
     }
   };
-
   const connect = () => {
-    let Sock = new SockJS("http://13.68.177.51:8087/ws");
+    let Sock = new SockJS("http://13.68.177.51:8087/chatservice/ws");
     stompClient = over(Sock);
     stompClient.connect({}, onConnected, onError);
   };
@@ -166,21 +179,21 @@ export default function App() {
     let updatedChatCountIndex = null;
     const activeChat = localStorage.getItem("activeChat");
     let result = _.find(memberList, function (obj) {
-      if (obj.senderName === payloadData.senderName) {
+      if (obj.secondaryUser === payloadData.senderName) {
         return true;
       }
     });
     if (result) {
       searchedInMembersList.map((member, index) => {
         if (
-          payloadData.senderName === member.senderName &&
-          activeChat === member.senderName
+          payloadData.senderName === member.secondaryUser &&
+          activeChat === member.secondaryUser
         ) {
           updatedChatCountIndex = index;
           memberList[index].unreadCount = 0;
         } else if (
-          payloadData.senderName === member.senderName &&
-          activeChat !== member.senderName
+          payloadData.senderName === member.secondaryUser &&
+          activeChat !== member.secondaryUser
         ) {
           updatedChatCountIndex = index;
           memberList[index].unreadCount = memberList[index].unreadCount + 1;
@@ -196,14 +209,18 @@ export default function App() {
     }
 
     setSearchedInMembersList(memberList);
+    console.log("test:", 4);
     setMessages((temp) => [...temp, payloadData]);
   };
 
   const onUpdatedUsersHistory = (payload) => {
     const payloadData = JSON.parse(payload.body);
     console.log("payloadData", payloadData);
-    setMessagedMembersList(payloadData);
-    setSearchedInMembersList(payloadData);
+    if (payloadData.topicName === "read-messages-status") {
+    } else {
+      // setMessagedMembersList(payloadData);
+      // setSearchedInMembersList(payloadData);
+    }
   };
 
   const onError = (err) => {
@@ -216,7 +233,9 @@ export default function App() {
   };
 
   const connectingFunction = async () => {
-    const isUsernameExists = users.some((user) => user === userData.username);
+    const isUsernameExists = users.some(
+      (user) => user.userName === userData.username
+    );
 
     if (isUsernameExists) {
       try {
@@ -254,8 +273,8 @@ export default function App() {
 
       if (userData.fileUrl) {
         chatMessage = {
-          senderName: userData.username,
-          receiverName: currentChatMember.sender.senderName,
+          senderName: currentChatMember.sender.primaryUser,
+          receiverName: currentChatMember.sender.secondaryUser,
           message: userData.message,
           messageStatus: "DELIVERED",
           fileUrl: userData.fileUrl,
@@ -266,8 +285,8 @@ export default function App() {
         };
       } else {
         chatMessage = {
-          senderName: userData.username,
-          receiverName: currentChatMember.sender.senderName,
+          senderName: currentChatMember.sender.primaryUser,
+          receiverName: currentChatMember.sender.secondaryUser,
           message: userData.message,
           messageStatus: "DELIVERED",
 
@@ -277,13 +296,14 @@ export default function App() {
       }
 
       stompClient.send("/app/private-message", {}, JSON.stringify(chatMessage));
-
+      console.log("test:", 1);
       setMessages([...message, chatMessage]);
       setFileModal(false);
+
       if (!userData.receivername) {
         setUserData({
           ...userData,
-          receivername: currentChatMember.sender.senderName,
+          receivername: currentChatMember.sender?.secondaryUser,
           message: "",
           fileUrl: "",
           fileName: "",
@@ -301,8 +321,8 @@ export default function App() {
       if (
         currentChatMember !== null &&
         searchedInMembersList.length > 0 &&
-        searchedInMembersList[0].senderName !==
-          currentChatMember.sender.senderName
+        searchedInMembersList[0].secondaryUser !==
+          currentChatMember.sender?.secondaryUser
       ) {
         if (currentChatMember.isNewMember) {
           setSearchedInMembersList([
@@ -313,7 +333,9 @@ export default function App() {
           const data = [...searchedInMembersList];
           data.splice(
             _.findIndex(searchedInMembersList, function (member) {
-              return member.senderName == currentChatMember.sender.senderName;
+              return (
+                member.secondaryUser == currentChatMember.sender?.secondaryUser
+              );
             }),
             1
           );
@@ -325,7 +347,7 @@ export default function App() {
       }
     } else {
       connect();
-      handleSendMessage();
+      // handleSendMessage();
       setFileModal(false);
     }
   };
@@ -335,7 +357,7 @@ export default function App() {
     if (e.target.value.length > 0) {
       const regexp = new RegExp(e.target.value, "i");
       const filteredUsers = users
-        .filter((user) => user !== userData.username)
+        .filter((user) => user.userName !== userData.username)
         .filter((user) => regexp.test(user));
       setSearchedUsers([...filteredUsers]);
     } else {
@@ -354,7 +376,7 @@ export default function App() {
       alert("Username should not be empty");
       return;
     }
-
+    localStorage.setItem("activeChat", "");
     fetchUsers();
     // Check if the entered username exists in the messagedMembersList
   };
@@ -362,7 +384,7 @@ export default function App() {
     try {
       // Fetch messages for the user
       const response = await fetch(
-        `http://13.68.177.51:8087/api/messages/private?sender=${sender.senderName}&receiver=${userData.username}&pageNo=${pageNumber}&pageSize=${pageSize}`
+        `http://13.68.177.51:8087/chatservice/api/messages/private?sender=${sender?.secondaryUser}&receiver=${userData.username}&pageNo=${pageNumber}&pageSize=${pageSize}`
       );
       const data = await response.json();
 
@@ -388,7 +410,7 @@ export default function App() {
         messageIds.push(msg.id);
       }
     });
-    await fetch("http://13.68.177.51:8087/api/change/status", {
+    await fetch("http://13.68.177.51:8087/chatservice/api/change/status", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -408,7 +430,7 @@ export default function App() {
     scrollToBottom();
     setPageNo(0);
     setCurrentChatMember({ sender, isNewMember: false });
-    handleUpdateUrl(sender.senderName);
+    handleUpdateUrl(sender?.secondaryUser);
     const data = [...searchedInMembersList];
     data[index].unreadCount = 0;
     setSearchedInMembersList(data);
@@ -436,7 +458,7 @@ export default function App() {
       try {
         // Perform the necessary API call to add the user to the database
         const response = await fetch(
-          "http://13.68.177.51:8087/api/uploadFile",
+          "http://13.68.177.51:8087/chatservice/api/uploadFile",
           {
             method: "POST",
 
@@ -475,13 +497,17 @@ export default function App() {
   const addUserToDatabase = async (username) => {
     try {
       // Perform the necessary API call to add the user to the database
-      const response = await fetch("http://13.68.177.51:8087/api/addUser", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ name: username }),
-      });
+
+      const response = await fetch(
+        "http://13.68.177.51:8087/chatservice/api/addUser",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ name: username }),
+        }
+      );
 
       // Handle the response if needed
       const result = await response.json();
@@ -494,7 +520,7 @@ export default function App() {
     if (e.target.value.length > 0) {
       const regexp = new RegExp(e.target.value, "i");
       const filteredMember = messagedMembersList.filter((member) =>
-        regexp.test(member.senderName)
+        regexp.test(member.secondaryUser)
       );
       setSearchedInMembersList(filteredMember);
     } else {
@@ -506,7 +532,7 @@ export default function App() {
 
   const handleCreateNewChat = (name) => {
     const isAlreadyMember = searchedInMembersList
-      ? searchedInMembersList.filter((member) => member.senderName === name)
+      ? searchedInMembersList.filter((member) => member.secondaryUser === name)
       : [];
     if (isAlreadyMember.length === 0) {
       handleGetChatHistory({ senderName: name }, "load", 0);
@@ -515,8 +541,8 @@ export default function App() {
         index: null,
         isNewMember: true,
         sender: {
-          senderName: name,
-          receiverName: userData.username,
+          secondaryUser: name,
+          primaryUser: userData.username,
           unreadCount: 0,
           lastMessageTimeStamp: "",
           lastMessage: "",
@@ -524,7 +550,7 @@ export default function App() {
       });
     } else {
       const index = messagedMembersList.findIndex(
-        (member) => member.senderName === name
+        (member) => member.secondaryUser === name
       );
       onTabChange(name, index, isAlreadyMember[0]);
     }
@@ -574,18 +600,23 @@ export default function App() {
           <MDBRow>
             <MDBCol md="3" lg="3" xl="3" className="mb-4 mb-md-0 p-0">
               <MDBCard style={{ minHeight: "100vh" }}>
-                <div className="mt-3 border-bottom">
-                  <h5 className="font-weight-bold mb-2 d-flex">
-                    <MDBIcon
-                      className="d-flex align-self-center m-0 p-2"
-                      fas
-                      size="1x"
-                      icon="comment-alt"
-                      style={{ color: "#2164c8" }}
-                    />
-                    Chat
-                  </h5>
-                </div>
+                <nav class="navbar navbar-expand-lg navbar-light bg-body-tertiary">
+                  <div class="container-fluid">
+                    <div
+                      class="collapse navbar-collapse"
+                      id="navbarSupportedContent"
+                    >
+                      <MDBIcon
+                        className="d-flex align-self-center m-0 p-2"
+                        fas
+                        size="sm"
+                        icon="comment-alt"
+                        style={{ color: "#212529" }}
+                      />
+                      Chats
+                    </div>
+                  </div>
+                </nav>
                 {messagedMembersList && (
                   <div className="p-1">
                     <MDBInputGroup className="rounded p-0">
@@ -607,7 +638,7 @@ export default function App() {
                             {searchedInMembersList?.map(
                               (
                                 {
-                                  senderName,
+                                  secondaryUser,
                                   unreadCount,
                                   lastMessage,
                                   lastMessageTimeStamp,
@@ -619,18 +650,21 @@ export default function App() {
                                   className="p-2"
                                   style={{
                                     backgroundColor:
-                                      currentChatMember?.sender?.senderName ===
-                                        senderName && "rgb(220 226 236)",
+                                      currentChatMember?.sender
+                                        ?.secondaryUser === secondaryUser &&
+                                      "rgb(220 226 236)",
                                     color:
-                                      currentChatMember?.sender?.senderName ===
-                                        senderName && "#000",
+                                      currentChatMember?.sender
+                                        ?.secondaryUser === secondaryUser &&
+                                      "#000",
                                     borderRadius:
-                                      currentChatMember?.sender?.senderName ===
-                                        senderName && "0.5rem",
+                                      currentChatMember?.sender
+                                        ?.secondaryUser === secondaryUser &&
+                                      "0.5rem",
                                   }}
                                   onClick={() => {
                                     onTabChange(
-                                      senderName,
+                                      secondaryUser,
                                       index,
                                       searchedInMembersList[index]
                                     );
@@ -653,10 +687,10 @@ export default function App() {
 
                                       <div className="pt-1 ms-3">
                                         <p className="fw-bold mb-0">
-                                          {senderName}
+                                          {secondaryUser}
                                         </p>
                                         <p className="small text-muted">
-                                          {lastMessage.slice(0, 10) + "..."}
+                                          {lastMessage?.slice(0, 10) + "..."}
                                         </p>
                                       </div>
                                     </div>
@@ -669,7 +703,7 @@ export default function App() {
                                       </p>
                                       {unreadCount > 0 &&
                                         currentChatMember?.sender
-                                          ?.senderName !== senderName && (
+                                          ?.secondaryUser !== secondaryUser && (
                                           <span className="badge bg-danger float-end">
                                             {unreadCount}
                                           </span>
@@ -725,7 +759,7 @@ export default function App() {
                             {searchedInMembersList?.map(
                               (
                                 {
-                                  senderName,
+                                  secondaryUser,
                                   unreadCount,
                                   lastMessage,
                                   lastMessageTimeStamp,
@@ -734,16 +768,16 @@ export default function App() {
                               ) => (
                                 <ListGroup.Item
                                   as="li"
-                                  key={senderName}
+                                  key={secondaryUser}
                                   className={`d-flex justify-content-between align-items-start ${
-                                    currentChatMember?.sender?.senderName ===
-                                      senderName && "active"
+                                    currentChatMember?.sender?.secondaryUser ===
+                                      secondaryUser && "active"
                                   }`}
                                 >
                                   <div
                                     onClick={() => {
                                       onTabChange(
-                                        senderName,
+                                        secondaryUser,
                                         index,
                                         searchedInMembersList[index]
                                       );
@@ -765,11 +799,11 @@ export default function App() {
                                     }
                                     <div className="ms-3">
                                       <div className="fw-bold d-block">
-                                        {senderName}
+                                        {secondaryUser}
                                       </div>
 
                                       <p className="small text-muted mb-1 d-block">
-                                        Analyst
+                                        {lastMessage}
                                       </p>
                                     </div>
                                   </div>
@@ -786,7 +820,9 @@ export default function App() {
                             {searchedInMembersList?.map(
                               (
                                 {
-                                  senderName,
+                                  secondaryUser,
+                                  firstName,
+                                  lastName,
                                   unreadCount,
                                   lastMessage,
                                   lastMessageTimeStamp,
@@ -795,16 +831,16 @@ export default function App() {
                               ) => (
                                 <ListGroup.Item
                                   as="li"
-                                  key={senderName}
+                                  key={secondaryUser}
                                   className={`d-flex justify-content-between align-items-start ${
-                                    currentChatMember?.sender?.senderName ===
-                                      senderName && "active"
+                                    currentChatMember?.sender?.secondaryUser ===
+                                      secondaryUser && "active"
                                   }`}
                                 >
                                   <div
                                     onClick={() => {
                                       onTabChange(
-                                        senderName,
+                                        secondaryUser,
                                         index,
                                         searchedInMembersList[index]
                                       );
@@ -826,11 +862,11 @@ export default function App() {
                                     }
                                     <div className="ms-3">
                                       <div className="fw-bold d-block">
-                                        {senderName}
+                                        {secondaryUser}
                                       </div>
 
                                       <p className="small text-muted mb-1 d-block">
-                                        Analyst
+                                        {lastMessage}
                                       </p>
                                     </div>
                                   </div>
@@ -848,36 +884,34 @@ export default function App() {
             {currentChatMember && (
               <MDBCol md="6" lg="6" xl="6" className="p-0">
                 <MDBCard style={{ minHeight: "100vh" }}>
-                  <div className="p-1">
-                    <div className="d-flex flex-row border-bottom p-0">
-                      <MDBInputGroup className="rounded p-0">
-                        <input
-                          className="form-control rounded search m-1"
-                          placeholder="Search Messages"
-                          type="search"
-                          onChange={() => {}}
-                        />
-                      </MDBInputGroup>
-                    </div>
+                  <div className="d-flex flex-row border-bottom p-0">
+                    <MDBInputGroup className="rounded p-0">
+                      <input
+                        className="form-control rounded search m-1"
+                        placeholder="Search Messages"
+                        type="search"
+                        onChange={() => {}}
+                      />
+                    </MDBInputGroup>
                   </div>
 
-                  <div className="d-flex flex-row border-bottom p-1">
+                  <div className="d-flex flex-row border rounded-2 p-1">
                     {
                       <img
                         src={chatProfile}
                         alt="avatar"
                         // className="d-flex align-self-center me-3 shadow-1-strong float-start"
                         className="rounded-4 shadow-4"
-                        style={{ width: "50px", height: "50px" }}
+                        style={{ width: "55px", height: "55px" }}
                       />
                     }
 
                     <div
                       className="ms-3 pt-2 float-start"
-                      style={{ width: "60%" }}
+                      style={{ width: "90%" }}
                     >
                       <p className="fw-bold mb-0">
-                        {currentChatMember?.sender?.senderName}
+                        {currentChatMember?.sender?.secondaryUser}
                       </p>
                       <p className="small text-muted m-0">
                         <span className="text-muted float-start m-0 p-0">
@@ -894,13 +928,13 @@ export default function App() {
                         Available
                       </p>
                     </div>
-                    <div className="float-end" style={{ width: "30%" }}>
+                    <div className="float-end mt-4">
                       <MDBIcon
-                        className="d-flex align-self-center mt-3 me-3 float-end"
+                        className="d-flex align-self-center mt-1 me-2 float-end"
                         fas
                         size="lg"
-                        icon="close"
-                        style={{ color: "#3b71ca", cursor: "pointer" }}
+                        icon="square-xmark"
+                        style={{ color: "#212529", cursor: "pointer" }}
                         onClick={() => setCurrentChatMember(null)}
                       />
                     </div>
@@ -946,7 +980,7 @@ export default function App() {
                     </MDBCardBody>
                   ) : (
                     <MDBCardBody
-                      className="mt-1 customScroll"
+                      className="customScroll border rounded-2"
                       onScroll={handleChatScroll}
                     >
                       <div>
@@ -957,15 +991,14 @@ export default function App() {
                               <div ref={messagesTopRef} />
                               {message?.map((chat, index) => (
                                 <>
-                                  {chat.senderName !== userData.username &&
-                                    chat.senderName ===
-                                      currentChatMember.sender.senderName && (
-                                      <li
-                                        className="d-flex flex-row justify-content-start"
-                                        key={index}
-                                        ref={index === 2 ? messagesTopRef : {}}
-                                      >
-                                        {/* <img
+                                  {chat.receiverName !==
+                                    currentChatMember.sender?.secondaryUser && (
+                                    <li
+                                      className="d-flex flex-row justify-content-start"
+                                      key={index}
+                                      ref={index === 2 ? messagesTopRef : {}}
+                                    >
+                                      {/* <img
                                       src="https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-chat/ava6-bg.webp"
                                       alt="avatar 1"
                                       style={{
@@ -973,39 +1006,40 @@ export default function App() {
                                         height: "100%",
                                       }}
                                     /> */}
-                                        <div>
-                                          <p className="small p-2 ms-3 mb-1 text-white bg-secondary bg-gradient bubble-left">
-                                            {chat.message}
-                                            {chat.fileUrl && (
-                                              <a
-                                                className="download-link"
-                                                href={chat.fileUrl}
-                                              >
-                                                <MDBIcon
-                                                  fas
-                                                  size="lg"
-                                                  icon="file-lines"
-                                                  style={{
-                                                    color: "white",
-                                                  }}
-                                                />
-                                              </a>
-                                            )}
-                                          </p>
+                                      <div>
+                                        <p className="small p-2 ms-3 mb-1 text-white bg-secondary bg-gradient bubble-left">
+                                          {chat.message}
+                                          {chat.fileUrl && (
+                                            <a
+                                              className="download-link"
+                                              href={chat.fileUrl}
+                                            >
+                                              <MDBIcon
+                                                fas
+                                                size="lg"
+                                                icon="file-lines"
+                                                style={{
+                                                  color: "white",
+                                                }}
+                                              />
+                                            </a>
+                                          )}
+                                        </p>
 
-                                          <p className="small ms-3 mb-3 rounded-3 text-muted float-end">
-                                            {chat.date}
-                                          </p>
-                                        </div>
-                                      </li>
-                                    )}{" "}
-                                  {chat.senderName === userData.username && (
+                                        <p className="small ms-3 mb-3 rounded-3 text-muted float-end">
+                                          {chat.date}
+                                        </p>
+                                      </div>
+                                    </li>
+                                  )}{" "}
+                                  {chat.receiverName ===
+                                    currentChatMember.sender?.secondaryUser && (
                                     <li
                                       className="d-flex flex-row justify-content-end"
                                       key={index}
                                     >
                                       <div>
-                                        <p className="small p-2 me-3 mb-1 text-white bg-primary bg-gradient bubble-right">
+                                        <p className="small p-2 me-3 mb-1 text-white bg-info bg-gradient bubble-right">
                                           {chat.message}
                                           {chat.fileUrl && (
                                             <a
@@ -1117,13 +1151,13 @@ export default function App() {
                       </div>
                     </MDBCardBody>
                   )}
-                  <form>
-                    <div className="text-muted d-flex justify-content-start align-items-center pe-3 pt-3 mt-2 mb-3 ms-3">
+                  <form className="border rounded-2">
+                    <div className="text-muted d-flex justify-content-start align-items-center pe-3 pt-3 mt-1 mb-3 ms-3">
                       <label className="me-3" htmlFor="fileAdd">
                         <MDBIcon
                           fas
                           icon="link"
-                          style={{ color: "#3b71ca", cursor: "pointer" }}
+                          style={{ color: "#212529", cursor: "pointer" }}
                         />
                       </label>
                       <input
@@ -1158,7 +1192,7 @@ export default function App() {
                         <MDBIcon
                           fas
                           icon="paper-plane"
-                          style={{ color: "#3b71ca", cursor: "pointer" }}
+                          style={{ color: "#212529", cursor: "pointer" }}
                         />
                       </button>
 
@@ -1177,17 +1211,143 @@ export default function App() {
 
             <MDBCol md="3" lg="3" xl="3" className="mb-4 mb-md-0 p-0">
               <MDBCard style={{ minHeight: "100vh" }}>
-                <div className="mt-3 border-bottom">
-                  <h5 className="font-weight-bold mb-3 text-center">
-                    Welcome {userData.username}
-                  </h5>
-                </div>
+                <nav class="navbar navbar-expand-lg navbar-light bg-body-tertiary">
+                  <div class="container-fluid">
+                    <div
+                      class="collapse navbar-collapse"
+                      id="navbarSupportedContent"
+                    >
+                      {"Team Members:"}
+                      {/* <span className="badge bg-danger">{users.length}</span> */}
+                      <MDBBadge className="ms-2 bg-secondary">
+                        {users.length}
+                      </MDBBadge>
+                    </div>
+                    <div class="d-flex align-items-center">
+                      <div class="dropdown">
+                        {/* <a
+                          data-mdb-dropdown-init
+                          class="text-reset me-3 dropdown-toggle hidden-arrow"
+                          href="#"
+                          id="navbarDropdownMenuLink"
+                          role="button"
+                          aria-expanded="false"
+                        >
+                          <i size="lg" class="fas fa-bell"></i>
+                          <span class="badge rounded-pill badge-notification bg-danger">
+                            1
+                          </span>
+                        </a> */}
+                        <a className="mx-3" href="#!">
+                          <MDBIcon
+                            fas
+                            icon="bell"
+                            size="lg"
+                            style={{ color: "#212529" }}
+                          />
+                          <MDBBadge color="danger" notification pill>
+                            1
+                          </MDBBadge>
+                        </a>
+                        <ul
+                          class="dropdown-menu dropdown-menu-end"
+                          aria-labelledby="navbarDropdownMenuLink"
+                        >
+                          <li>
+                            <a class="dropdown-item" href="#">
+                              Some news
+                            </a>
+                          </li>
+                          <li>
+                            <a class="dropdown-item" href="#">
+                              Another news
+                            </a>
+                          </li>
+                          <li>
+                            <a class="dropdown-item" href="#">
+                              Something else here
+                            </a>
+                          </li>
+                        </ul>
+                      </div>
+                      {/* <div class="dropdown"> */}
+                      {/* <a
+                          data-mdb-dropdown-init
+                          class="dropdown-toggle d-flex align-items-center hidden-arrow"
+                          href="#"
+                          id="navbarDropdownMenuAvatar"
+                          role="button"
+                          aria-expanded="false"
+                        >
+                          <img
+                            src="https://mdbcdn.b-cdn.net/img/new/avatars/2.webp"
+                            class="rounded-circle"
+                            height="25"
+                            alt="Black and White Portrait of a Man"
+                            loading="lazy"
+                          />
+                        </a> */}
+
+                      <MDBDropdown>
+                        <MDBDropdownToggle
+                          tag="a"
+                          className="hidden-arrow"
+                          style={{ cursor: "pointer" }}
+                        >
+                          {/* <a
+                          data-mdb-dropdown-init
+                          class="mx-2 dropdown-toggle d-flex align-items-center hidden-arrow"
+                          href="#"
+                          id="navbarDropdownMenuAvatar"
+                          role="button"
+                          aria-expanded="false"
+                        > */}
+                          <MDBIcon
+                            fas
+                            icon="circle-user"
+                            size="lg"
+                            style={{ color: "#212529" }}
+                          />
+                          {/* </a> */}
+                        </MDBDropdownToggle>
+                        <MDBDropdownMenu responsive="lg-end">
+                          <MDBDropdownItem link>
+                            Welcome {userData.username}
+                          </MDBDropdownItem>
+                          <MDBDropdownItem link>Settings</MDBDropdownItem>
+                          {/* <MDBDropdownItem link>Something else here</MDBDropdownItem> */}
+                        </MDBDropdownMenu>
+                      </MDBDropdown>
+                      {/* <ul
+                          class="dropdown-menu dropdown-menu-end"
+                          aria-labelledby="navbarDropdownMenuAvatar"
+                        >
+                          <li>
+                            <a class="dropdown-item" href="#">
+                              My profile
+                            </a>
+                          </li>
+                          <li>
+                            <a class="dropdown-item" href="#">
+                              Settings
+                            </a>
+                          </li>
+                          <li>
+                            <a class="dropdown-item" href="#">
+                              Logout
+                            </a>
+                          </li>
+                        </ul> */}
+                    </div>
+                  </div>
+                  {/* </div> */}
+                </nav>
+
                 <div className="p-2">
-                  <h6 className="mb-2">
+                  {/* <h6 className="mb-2">
                     {"Team Members:"}
-                    {/* <span className="badge bg-danger">{users.length}</span> */}
-                    <MDBBadge className="ms-2">{users.length}</MDBBadge>
-                  </h6>
+                    <MDBBadge className="ms-2 bg-secondary">{users.length}</MDBBadge>
+                  </h6> */}
                   <MDBInputGroup className="rounded">
                     <input
                       className="form-control rounded search m-0"
@@ -1202,12 +1362,12 @@ export default function App() {
                   {searchedUsers && (
                     <MDBTypography listUnStyled className="mb-0">
                       <ul className="chat-persons">
-                        {searchedUsers?.map((name, index) => (
+                        {searchedUsers?.map((user, index) => (
                           <li className="p-2" key={index}>
                             <div
                               className="d-flex justify-content-between"
                               onClick={() => {
-                                handleCreateNewChat(name);
+                                handleCreateNewChat(user.userName);
                               }}
                             >
                               <div className="d-flex flex-row">
@@ -1229,7 +1389,7 @@ export default function App() {
                                 }
                                 <div className="pt-1 ms-3">
                                   <p className="fw-bold mb-0">
-                                    {name}
+                                    {user.firstName} {user.lastName}
                                     {/* <sup>
                                       <MDBIcon
                                         fas
@@ -1244,7 +1404,7 @@ export default function App() {
                                     </sup> */}
                                   </p>
                                   <p className="small text-muted">
-                                    Designation
+                                    {user?.role[0]}
                                   </p>
                                 </div>
                               </div>

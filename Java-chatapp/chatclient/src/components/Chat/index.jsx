@@ -6,8 +6,8 @@ import ListGroup from "react-bootstrap/ListGroup";
 import Form from "react-bootstrap/Form";
 import _ from "lodash";
 import SockJS from "sockjs-client";
-import profile from "../../assets/profile.jpeg";
-import chatProfile from "../../assets/profile.jpeg";
+import profile from "../../assets/profile2.jfif";
+import chatProfile from "../../assets/chatOnline.jfif";
 import { ToastContainer, toast } from "react-toastify";
 
 import "./chat.css";
@@ -41,8 +41,6 @@ export default function App() {
   const [searchedInMembersList, setSearchedInMembersList] = useState([]);
   const [currentChatMember, setCurrentChatMember] = useState(null);
   const [fileModal, setFileModal] = useState(false);
-
-  const [page, setPage] = useState(1);
 
   const [userData, setUserData] = useState({
     username: "",
@@ -164,6 +162,40 @@ export default function App() {
 
   const onPrivateMessage = (payload) => {
     const payloadData = JSON.parse(payload.body);
+    let memberList = [...searchedInMembersList];
+    let updatedChatCountIndex = null;
+    const activeChat = localStorage.getItem("activeChat");
+    let result = _.find(memberList, function (obj) {
+      if (obj.senderName === payloadData.senderName) {
+        return true;
+      }
+    });
+    if (result) {
+      searchedInMembersList.map((member, index) => {
+        if (
+          payloadData.senderName === member.senderName &&
+          activeChat === member.senderName
+        ) {
+          updatedChatCountIndex = index;
+          memberList[index].unreadCount = 0;
+        } else if (
+          payloadData.senderName === member.senderName &&
+          activeChat !== member.senderName
+        ) {
+          updatedChatCountIndex = index;
+          memberList[index].unreadCount = memberList[index].unreadCount + 1;
+        } else {
+          memberList[index].unreadCount = memberList[index].unreadCount;
+        }
+      });
+      const chat = memberList[updatedChatCountIndex];
+      memberList.splice(updatedChatCountIndex, 1);
+      memberList.unshift(chat);
+    } else {
+      memberList.unshift({ ...payloadData, unreadCount: 1 });
+    }
+
+    setSearchedInMembersList(memberList);
     setMessages((temp) => [...temp, payloadData]);
   };
 
@@ -218,17 +250,31 @@ export default function App() {
       return;
     }
     if (stompClient) {
-      const chatMessage = {
-        senderName: userData.username,
-        receiverName: currentChatMember.sender.senderName,
-        message: userData.message,
-        messageStatus: "DELIVERED",
-        fileUrl: userData.fileUrl,
-        fileName: userData.fileName,
-        fileType: userData.fileType,
-        date: getCurrentTimestamp(),
-        status: "MESSAGE",
-      };
+      let chatMessage = {};
+
+      if (userData.fileUrl) {
+        chatMessage = {
+          senderName: userData.username,
+          receiverName: currentChatMember.sender.senderName,
+          message: userData.message,
+          messageStatus: "DELIVERED",
+          fileUrl: userData.fileUrl,
+          fileName: userData.fileName,
+          fileType: userData.fileType,
+          date: getCurrentTimestamp(),
+          status: "MESSAGE",
+        };
+      } else {
+        chatMessage = {
+          senderName: userData.username,
+          receiverName: currentChatMember.sender.senderName,
+          message: userData.message,
+          messageStatus: "DELIVERED",
+
+          date: getCurrentTimestamp(),
+          status: "MESSAGE",
+        };
+      }
 
       stompClient.send("/app/private-message", {}, JSON.stringify(chatMessage));
 
@@ -254,20 +300,28 @@ export default function App() {
       }
       if (
         currentChatMember !== null &&
-        !currentChatMember.isNewMember &&
+        searchedInMembersList.length > 0 &&
         searchedInMembersList[0].senderName !==
           currentChatMember.sender.senderName
       ) {
-        const data = [...searchedInMembersList];
-        data.splice(
-          _.findIndex(searchedInMembersList, function (member) {
-            return member.senderName == currentChatMember.sender.senderName;
-          }),
-          1
-        );
-        data.unshift(currentChatMember.sender);
-
-        setSearchedInMembersList(data);
+        if (currentChatMember.isNewMember) {
+          setSearchedInMembersList([
+            currentChatMember.sender,
+            ...searchedInMembersList,
+          ]);
+        } else {
+          const data = [...searchedInMembersList];
+          data.splice(
+            _.findIndex(searchedInMembersList, function (member) {
+              return member.senderName == currentChatMember.sender.senderName;
+            }),
+            1
+          );
+          data.unshift(currentChatMember.sender);
+          setSearchedInMembersList(data);
+        }
+      } else if (searchedInMembersList.length === 0) {
+        setSearchedInMembersList([currentChatMember.sender]);
       }
     } else {
       connect();
@@ -347,10 +401,14 @@ export default function App() {
       }),
     });
   };
+  const handleUpdateUrl = (activeMember) => {
+    localStorage.setItem("activeChat", activeMember);
+  };
   const onTabChange = (name, index, sender) => {
     scrollToBottom();
     setPageNo(0);
     setCurrentChatMember({ sender, isNewMember: false });
+    handleUpdateUrl(sender.senderName);
     const data = [...searchedInMembersList];
     data[index].unreadCount = 0;
     setSearchedInMembersList(data);
@@ -447,25 +505,19 @@ export default function App() {
   };
 
   const handleCreateNewChat = (name) => {
-    setPageNo(0);
-    setMessages([]);
-    setUserData({
-      ...userData,
-      searchNewUserMessage: "",
-    });
-    setSearchedUsers(users);
-    const isAlreadyMember = searchedInMembersList.filter(
-      (member) => member.senderName === name
-    );
+    const isAlreadyMember = searchedInMembersList
+      ? searchedInMembersList.filter((member) => member.senderName === name)
+      : [];
     if (isAlreadyMember.length === 0) {
       handleGetChatHistory({ senderName: name }, "load", 0);
+
       setCurrentChatMember({
         index: null,
         isNewMember: true,
         sender: {
           senderName: name,
           receiverName: userData.username,
-          unreadCounazt: 0,
+          unreadCount: 0,
           lastMessageTimeStamp: "",
           lastMessage: "",
         },
@@ -476,6 +528,13 @@ export default function App() {
       );
       onTabChange(name, index, isAlreadyMember[0]);
     }
+    setPageNo(0);
+    setMessages([]);
+    setUserData({
+      ...userData,
+      searchNewUserMessage: "",
+    });
+    setSearchedUsers(users);
   };
   const handleChatScroll = (e) => {
     console.log(e.target.scrollTop);
@@ -523,7 +582,7 @@ export default function App() {
                       size="1x"
                       icon="comment-alt"
                       style={{ color: "#2164c8" }}
-                    />{" "}
+                    />
                     Chat
                   </h5>
                 </div>
@@ -542,99 +601,100 @@ export default function App() {
                 <MDBCardBody className="m-0 p-1 customScroll">
                   {messagedMembersList ? (
                     <MDBTypography listUnStyled className="mb-0">
-                      {searchedInMembersList && (
-                        <ul className="chat-persons">
-                          {searchedInMembersList?.map(
-                            (
-                              {
-                                senderName,
-                                unreadCount,
-                                lastMessage,
-                                lastMessageTimeStamp,
-                              },
-                              index
-                            ) => (
-                              <li
-                                key={index}
-                                className="p-2"
-                                style={{
-                                  backgroundColor:
-                                    currentChatMember?.sender?.senderName ===
-                                      senderName && "rgb(220 226 236)",
-                                  color:
-                                    currentChatMember?.sender?.senderName ===
-                                      senderName && "#000",
-                                  borderRadius:
-                                    currentChatMember?.sender?.senderName ===
-                                      senderName && "0.5rem",
-                                }}
-                                onClick={() => {
-                                  onTabChange(
-                                    senderName,
-                                    index,
-                                    searchedInMembersList[index]
-                                  );
-                                }}
-                              >
-                                <div className="d-flex justify-content-between">
-                                  <div className="d-flex flex-row">
-                                    {
-                                      <img
-                                        src={profile}
-                                        alt="avatar"
-                                        // className="d-flex align-self-center me-3 shadow-1-strong"
-                                        className="rounded-4 shadow-4"
-                                        style={{
-                                          width: "50px",
-                                          height: "50px",
-                                        }}
-                                      />
-                                    }
+                      {searchedInMembersList &&
+                        searchedInMembersList.length > 0 && (
+                          <ul className="chat-persons">
+                            {searchedInMembersList?.map(
+                              (
+                                {
+                                  senderName,
+                                  unreadCount,
+                                  lastMessage,
+                                  lastMessageTimeStamp,
+                                },
+                                index
+                              ) => (
+                                <li
+                                  key={index}
+                                  className="p-2"
+                                  style={{
+                                    backgroundColor:
+                                      currentChatMember?.sender?.senderName ===
+                                        senderName && "rgb(220 226 236)",
+                                    color:
+                                      currentChatMember?.sender?.senderName ===
+                                        senderName && "#000",
+                                    borderRadius:
+                                      currentChatMember?.sender?.senderName ===
+                                        senderName && "0.5rem",
+                                  }}
+                                  onClick={() => {
+                                    onTabChange(
+                                      senderName,
+                                      index,
+                                      searchedInMembersList[index]
+                                    );
+                                  }}
+                                >
+                                  <div className="d-flex justify-content-between">
+                                    <div className="d-flex flex-row">
+                                      {
+                                        <img
+                                          src={profile}
+                                          alt="avatar"
+                                          // className="d-flex align-self-center me-3 shadow-1-strong"
+                                          className="rounded-4 shadow-4"
+                                          style={{
+                                            width: "50px",
+                                            height: "50px",
+                                          }}
+                                        />
+                                      }
 
-                                    <div className="pt-1 ms-3">
-                                      <p className="fw-bold mb-0">
-                                        {senderName}
+                                      <div className="pt-1 ms-3">
+                                        <p className="fw-bold mb-0">
+                                          {senderName}
+                                        </p>
+                                        <p className="small text-muted">
+                                          {lastMessage.slice(0, 10) + "..."}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="pt-1">
+                                      <p className="small text-muted mb-1">
+                                        <TimeAgo
+                                          date={lastMessageTimeStamp}
+                                          minPeriod={60}
+                                        />
                                       </p>
-                                      <p className="small text-muted">
-                                        {lastMessage.slice(0, 10) + "..."}
-                                      </p>
+                                      {unreadCount > 0 &&
+                                        currentChatMember?.sender
+                                          ?.senderName !== senderName && (
+                                          <span className="badge bg-danger float-end">
+                                            {unreadCount}
+                                          </span>
+                                          // <span className="text-muted float-end">
+                                          //   <MDBIcon fas icon="check" />
+                                          // </span>
+                                        )}
+                                      <span className="text-muted float-end">
+                                        <MDBIcon
+                                          fas
+                                          size="xs"
+                                          icon="circle"
+                                          style={{
+                                            color: "#53c44d",
+                                            marginRight: "0.5rem",
+                                          }}
+                                        />
+                                      </span>
                                     </div>
                                   </div>
-                                  <div className="pt-1">
-                                    <p className="small text-muted mb-1">
-                                      <TimeAgo
-                                        date={lastMessageTimeStamp}
-                                        minPeriod={60}
-                                      />
-                                    </p>
-                                    {unreadCount > 0 &&
-                                      currentChatMember?.sender?.senderName !==
-                                        senderName && (
-                                        <span className="badge bg-danger float-end">
-                                          {unreadCount}
-                                        </span>
-                                        // <span className="text-muted float-end">
-                                        //   <MDBIcon fas icon="check" />
-                                        // </span>
-                                      )}
-                                    <span className="text-muted float-end">
-                                      <MDBIcon
-                                        fas
-                                        size="xs"
-                                        icon="circle"
-                                        style={{
-                                          color: "#53c44d",
-                                          marginRight: "0.5rem",
-                                        }}
-                                      />
-                                    </span>
-                                  </div>
-                                </div>
-                              </li>
-                            )
-                          )}
-                        </ul>
-                      )}
+                                </li>
+                              )
+                            )}
+                          </ul>
+                        )}
                     </MDBTypography>
                   ) : (
                     <MDBTypography listUnStyled className="mb-0">
@@ -897,13 +957,15 @@ export default function App() {
                               <div ref={messagesTopRef} />
                               {message?.map((chat, index) => (
                                 <>
-                                  {chat.senderName !== userData.username ? (
-                                    <li
-                                      className="d-flex flex-row justify-content-start"
-                                      key={index}
-                                      ref={index === 2 ? messagesTopRef : {}}
-                                    >
-                                      {/* <img
+                                  {chat.senderName !== userData.username &&
+                                    chat.senderName ===
+                                      currentChatMember.sender.senderName && (
+                                      <li
+                                        className="d-flex flex-row justify-content-start"
+                                        key={index}
+                                        ref={index === 2 ? messagesTopRef : {}}
+                                      >
+                                        {/* <img
                                       src="https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-chat/ava6-bg.webp"
                                       alt="avatar 1"
                                       style={{
@@ -911,32 +973,33 @@ export default function App() {
                                         height: "100%",
                                       }}
                                     /> */}
-                                      <div>
-                                        <p className="small p-2 ms-3 mb-1 text-white bg-secondary bg-gradient bubble-left">
-                                          {chat.message}
-                                          {chat.fileUrl && (
-                                            <a
-                                              className="download-link"
-                                              href={chat.fileUrl}
-                                            >
-                                              <MDBIcon
-                                                fas
-                                                size="lg"
-                                                icon="file-lines"
-                                                style={{
-                                                  color: "white",
-                                                }}
-                                              />
-                                            </a>
-                                          )}
-                                        </p>
+                                        <div>
+                                          <p className="small p-2 ms-3 mb-1 text-white bg-secondary bg-gradient bubble-left">
+                                            {chat.message}
+                                            {chat.fileUrl && (
+                                              <a
+                                                className="download-link"
+                                                href={chat.fileUrl}
+                                              >
+                                                <MDBIcon
+                                                  fas
+                                                  size="lg"
+                                                  icon="file-lines"
+                                                  style={{
+                                                    color: "white",
+                                                  }}
+                                                />
+                                              </a>
+                                            )}
+                                          </p>
 
-                                        <p className="small ms-3 mb-3 rounded-3 text-muted float-end">
-                                          {chat.date}
-                                        </p>
-                                      </div>
-                                    </li>
-                                  ) : (
+                                          <p className="small ms-3 mb-3 rounded-3 text-muted float-end">
+                                            {chat.date}
+                                          </p>
+                                        </div>
+                                      </li>
+                                    )}{" "}
+                                  {chat.senderName === userData.username && (
                                     <li
                                       className="d-flex flex-row justify-content-end"
                                       key={index}
@@ -1089,7 +1152,7 @@ export default function App() {
                         onClick={handleSendMessage}
                         // ref={node => (this.btn = node)}
                         type="submit"
-                        style={{ border: "none", background: 'white' }}
+                        style={{ border: "none", background: "white" }}
                         className="ms-3"
                       >
                         <MDBIcon
@@ -1206,7 +1269,11 @@ export default function App() {
             onChange={handleUsername}
             margin="normal"
           />
-          <button className="connect-button" type="button" onClick={registerUser}>
+          <button
+            className="connect-button"
+            type="button"
+            onClick={registerUser}
+          >
             connect
           </button>
         </div>

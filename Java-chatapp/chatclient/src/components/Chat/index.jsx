@@ -236,11 +236,16 @@ export default function App() {
   const onUpdatedUsersHistory = (payload) => {
     const payloadData = JSON.parse(payload.body);
     console.log("payloadData", payloadData);
-
+    const updatedMessage = [...message];
     if (payloadData.topicName === "read-messages-status") {
-    } else {
-      // setMessagedMembersList(payloadData);
-      // setSearchedInMembersList(payloadData);
+      payloadData.readMessageIDs.map((id) => {
+        message.map((msg, index) => {
+          if (msg.id === id) {
+            updatedMessage[index].messageStatus = "READ";
+          }
+        });
+      });
+      setMessages(updatedMessage);
     }
   };
 
@@ -662,6 +667,7 @@ export default function App() {
                             {searchedInMembersList?.map(
                               (
                                 {
+                                  secondaryUserImageUrl,
                                   secondaryUser,
                                   secondaryUserFirstName,
                                   secondaryUserLastName,
@@ -700,7 +706,7 @@ export default function App() {
                                     <div className="d-flex flex-row">
                                       {
                                         <img
-                                          src={profile}
+                                          src={secondaryUserImageUrl}
                                           alt="avatar"
                                           // className="d-flex align-self-center me-3 shadow-1-strong"
                                           className="rounded-4 shadow-4"
@@ -786,6 +792,7 @@ export default function App() {
                             {searchedInMembersList?.map(
                               (
                                 {
+                                  secondaryUserImageUrl,
                                   secondaryUser,
                                   secondaryUserFirstName,
                                   secondaryUserLastName,
@@ -816,7 +823,7 @@ export default function App() {
                                   >
                                     {
                                       <img
-                                        src={profile}
+                                        src={secondaryUserImageUrl}
                                         alt="avatar"
                                         // className="d-flex align-self-center me-3 shadow-1-strong"
                                         className="rounded-4 shadow-4"
@@ -850,6 +857,7 @@ export default function App() {
                             {searchedInMembersList?.map(
                               (
                                 {
+                                  secondaryUserImageUrl,
                                   secondaryUser,
                                   secondaryUserFirstName,
                                   secondaryUserLastName,
@@ -882,7 +890,7 @@ export default function App() {
                                   >
                                     {
                                       <img
-                                        src={profile}
+                                        src={secondaryUserImageUrl}
                                         alt="avatar"
                                         // className="d-flex align-self-center me-3 shadow-1-strong"
                                         className="rounded-4 shadow-4"
@@ -934,7 +942,7 @@ export default function App() {
                   >
                     {
                       <img
-                        src={chatProfile}
+                        src={currentChatMember.sender.secondaryUserImageUrl}
                         alt="avatar"
                         // className="d-flex align-self-center me-3 shadow-1-strong float-start"
                         className="rounded-4 shadow-4"
@@ -1362,7 +1370,7 @@ export default function App() {
                             1
                           </span>
                         </a> */}
-                        <a className="mx-3" href="#!">
+                        {/* <a className="mx-3" href="#!">
                           <MDBIcon
                             fas
                             icon="bell"
@@ -1392,7 +1400,7 @@ export default function App() {
                               Something else here
                             </a>
                           </li>
-                        </ul>
+                        </ul> */}
                       </div>
                       {/* <div class="dropdown"> */}
                       {/* <a
@@ -1438,7 +1446,6 @@ export default function App() {
                           <MDBDropdownItem link>
                             Welcome {userData.username}
                           </MDBDropdownItem>
-                          <MDBDropdownItem link>Settings</MDBDropdownItem>
                           {/* <MDBDropdownItem link>Something else here</MDBDropdownItem> */}
                         </MDBDropdownMenu>
                       </MDBDropdown>
@@ -1503,7 +1510,7 @@ export default function App() {
                                       </span>
                                     </MDBBadge>
                                     <img
-                                      src={profile}
+                                      src={user.profileImageUrl}
                                       alt="avatar"
                                       // className="d-flex align-self-center me-3 shadow-1-strong"
                                       className="rounded-4 shadow-4"

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { over } from "stompjs";
 import Badge from "react-bootstrap/Badge";
 import TimeAgo from "react-timeago";
@@ -173,49 +173,70 @@ export default function App() {
     return formattedTime;
   };
 
-  const onPrivateMessage = (payload) => {
-    const payloadData = JSON.parse(payload.body);
-    let memberList = [...searchedInMembersList];
-    let updatedChatCountIndex = null;
-    const activeChat = localStorage.getItem("activeChat");
-    let result = _.find(memberList, function (obj) {
-      if (obj.secondaryUser === payloadData.senderName) {
-        return true;
-      }
-    });
-    if (result) {
-      searchedInMembersList.map((member, index) => {
-        if (
-          payloadData.senderName === member.secondaryUser &&
-          activeChat === member.secondaryUser
-        ) {
-          updatedChatCountIndex = index;
-          memberList[index].unreadCount = 0;
-        } else if (
-          payloadData.senderName === member.secondaryUser &&
-          activeChat !== member.secondaryUser
-        ) {
-          updatedChatCountIndex = index;
-          memberList[index].unreadCount = memberList[index].unreadCount + 1;
-        } else {
-          memberList[index].unreadCount = memberList[index].unreadCount;
+  const onPrivateMessage = useCallback(
+    (payload) => {
+      const payloadData = JSON.parse(payload.body);
+      let memberList = [...searchedInMembersList];
+      let updatedChatCountIndex = null;
+      const activeChat = localStorage.getItem("activeChat");
+      let result = _.find(memberList, function (obj) {
+        if (obj.secondaryUser === payloadData.senderName) {
+          return true;
         }
       });
-      const chat = memberList[updatedChatCountIndex];
-      memberList.splice(updatedChatCountIndex, 1);
-      memberList.unshift(chat);
-    } else {
-      memberList.unshift({ ...payloadData, unreadCount: 1 });
-    }
+      if (result) {
+        searchedInMembersList.map((member, index) => {
+          if (
+            payloadData.senderName === member.secondaryUser &&
+            activeChat === member.secondaryUser
+          ) {
+            updatedChatCountIndex = index;
+            memberList[index].unreadCount = 0;
+            memberList[index].lastMessage = payloadData.message;
+            memberList[index].lastUpdatedDate = payloadData.timeStamp;
+          } else if (
+            payloadData.senderName === member.secondaryUser &&
+            activeChat !== member.secondaryUser
+          ) {
+            updatedChatCountIndex = index;
+            memberList[index].unreadCount = memberList[index].unreadCount + 1;
+            memberList[index].lastMessage = payloadData.message;
+            memberList[index].lastUpdatedDate = payloadData.timeStamp;
+          } else {
+            memberList[index].unreadCount = memberList[index].unreadCount;
+          }
+        });
+        const chat = memberList[updatedChatCountIndex];
+        memberList.splice(updatedChatCountIndex, 1);
+        memberList.unshift(chat);
+      } else {
+        const newUser = _.filter(users, (o) => {
+          return o.userName === payloadData.senderName;
+        });
+        const newChat = {
+          id: payloadData.id,
+          lastMessage: payloadData.message,
+          lastUpdatedDate: payloadData.timeStamp,
+          primaryUser: payloadData.receiverName,
+          secondaryUser: payloadData.senderName,
+          secondaryUserFirstName: newUser.firstName,
+          secondaryUserLastName: newUser.lastName,
+          sentby: payloadData.senderName,
+          unreadCount: 1,
+        };
+        memberList.unshift({ ...newChat });
+      }
 
-    setSearchedInMembersList(memberList);
-    console.log("test:", 4);
-    setMessages((temp) => [...temp, payloadData]);
-  };
+      setSearchedInMembersList(() => [...memberList]);
+      setMessages((temp) => [...temp, payloadData]);
+    },
+    [searchedInMembersList]
+  );
 
   const onUpdatedUsersHistory = (payload) => {
     const payloadData = JSON.parse(payload.body);
     console.log("payloadData", payloadData);
+
     if (payloadData.topicName === "read-messages-status") {
     } else {
       // setMessagedMembersList(payloadData);
@@ -418,8 +439,8 @@ export default function App() {
       body: JSON.stringify({
         messageIds: messageIds,
         messageStatus: "READ",
-        primaryUser: userData.username,
-        secondaryUser: sender.receiverName,
+        primaryUser: sender.primaryUser,
+        secondaryUser: sender.secondaryUser,
       }),
     });
   };
@@ -433,7 +454,7 @@ export default function App() {
     handleUpdateUrl(sender?.secondaryUser);
     const data = [...searchedInMembersList];
     data[index].unreadCount = 0;
-    setSearchedInMembersList(data);
+    setSearchedInMembersList((temp) => [...data]);
 
     handleGetChatHistory(sender, "load", 0);
   };
@@ -474,9 +495,7 @@ export default function App() {
           fileUrl: result.response.fileUploadedUrl,
           fileName: file.name,
           fileType: file.type,
-          message: file.name
-            ? userData.message + `(file:${file.name})`
-            : userData.message,
+          message: userData.message,
         });
         setFileModal(true);
       } catch (error) {
@@ -530,18 +549,23 @@ export default function App() {
     console.log("searchedInMembersList", searchedInMembersList);
   };
 
-  const handleCreateNewChat = (name) => {
+  const handleCreateNewChat = (newUser) => {
     const isAlreadyMember = searchedInMembersList
-      ? searchedInMembersList.filter((member) => member.secondaryUser === name)
+      ? searchedInMembersList.filter(
+          (member) => member.secondaryUser === newUser.userName
+        )
       : [];
     if (isAlreadyMember.length === 0) {
-      handleGetChatHistory({ senderName: name }, "load", 0);
+      handleGetChatHistory({ senderName: newUser.userName }, "load", 0);
 
       setCurrentChatMember({
         index: null,
         isNewMember: true,
         sender: {
-          secondaryUser: name,
+          secondaryUserFirstName: newUser.firstName,
+          secondaryUserLastName: newUser.lastName,
+          sentby: newUser.userName,
+          secondaryUser: newUser.userName,
           primaryUser: userData.username,
           unreadCount: 0,
           lastMessageTimeStamp: "",
@@ -550,9 +574,9 @@ export default function App() {
       });
     } else {
       const index = messagedMembersList.findIndex(
-        (member) => member.secondaryUser === name
+        (member) => member.secondaryUser === newUser.userName
       );
-      onTabChange(name, index, isAlreadyMember[0]);
+      onTabChange(newUser.userName, index, isAlreadyMember[0]);
     }
     setPageNo(0);
     setMessages([]);
@@ -639,6 +663,8 @@ export default function App() {
                               (
                                 {
                                   secondaryUser,
+                                  secondaryUserFirstName,
+                                  secondaryUserLastName,
                                   unreadCount,
                                   lastMessage,
                                   lastMessageTimeStamp,
@@ -687,7 +713,8 @@ export default function App() {
 
                                       <div className="pt-1 ms-3">
                                         <p className="fw-bold mb-0">
-                                          {secondaryUser}
+                                          {secondaryUserFirstName}{" "}
+                                          {secondaryUserLastName}
                                         </p>
                                         <p className="small text-muted">
                                           {lastMessage?.slice(0, 10) + "..."}
@@ -760,6 +787,8 @@ export default function App() {
                               (
                                 {
                                   secondaryUser,
+                                  secondaryUserFirstName,
+                                  secondaryUserLastName,
                                   unreadCount,
                                   lastMessage,
                                   lastMessageTimeStamp,
@@ -799,7 +828,8 @@ export default function App() {
                                     }
                                     <div className="ms-3">
                                       <div className="fw-bold d-block">
-                                        {secondaryUser}
+                                        {secondaryUserFirstName}{" "}
+                                        {secondaryUserLastName}
                                       </div>
 
                                       <p className="small text-muted mb-1 d-block">
@@ -821,6 +851,8 @@ export default function App() {
                               (
                                 {
                                   secondaryUser,
+                                  secondaryUserFirstName,
+                                  secondaryUserLastName,
                                   firstName,
                                   lastName,
                                   unreadCount,
@@ -862,7 +894,8 @@ export default function App() {
                                     }
                                     <div className="ms-3">
                                       <div className="fw-bold d-block">
-                                        {secondaryUser}
+                                        {secondaryUserFirstName}{" "}
+                                        {secondaryUserLastName}
                                       </div>
 
                                       <p className="small text-muted mb-1 d-block">
@@ -895,7 +928,10 @@ export default function App() {
                     </MDBInputGroup>
                   </div>
 
-                  <div className="d-flex flex-row border rounded-2 p-1">
+                  <div
+                    className="d-flex flex-row border rounded-2 p-1"
+                    style={{ background: "rgb(244, 244, 244)" }}
+                  >
                     {
                       <img
                         src={chatProfile}
@@ -911,7 +947,8 @@ export default function App() {
                       style={{ width: "90%" }}
                     >
                       <p className="fw-bold mb-0">
-                        {currentChatMember?.sender?.secondaryUser}
+                        {currentChatMember?.sender?.secondaryUserFirstName}{" "}
+                        {currentChatMember?.sender?.secondaryUserLastName}
                       </p>
                       <p className="small text-muted m-0">
                         <span className="text-muted float-start m-0 p-0">
@@ -941,28 +978,43 @@ export default function App() {
                   </div>
 
                   {fileModal ? (
-                    <MDBCardBody className="mt-1 border">
+                    <MDBCardBody className="customScroll border rounded-2">
+                      {/* <div className="float-end mt-4">
+                      <MDBIcon
+                        className="d-flex align-self-center mt-1 float-end"
+                        fas
+                        size="lg"
+                        icon="square-xmark"
+                        style={{ color: "#212529", cursor: "pointer" }}
+                        onClick={handleFileModalClose}
+                      />
+                    </div> */}
                       <div className="mt-2 p-2 text-center">
-                        <MDBIcon
-                          className="d-flex align-self-center mt-3 me-3 float-end"
-                          fas
-                          size="lg"
-                          icon="close"
-                          style={{ color: "#3b71ca", cursor: "pointer" }}
-                          onClick={handleFileModalClose}
-                        />
                         <p className="fw-bold mb-0">Attachment</p>
                         <div className="pt-2">
                           {!imgExtensions.exec(userData.fileName) ? (
                             <>
                               <MDBIcon
-                                className="mt-3 me-3"
+                                className="mt-3"
                                 fas
                                 size="10x"
                                 icon="file-lines"
-                                style={{ color: "#3b71ca" }}
+                                style={{ color: "grey" }}
                               />
-                              <p>{userData.fileName}</p>
+                              <p className="mt-4">
+                                {userData.fileName}{" "}
+                                <MDBIcon
+                                  className="align-self-center mt-1"
+                                  fas
+                                  size="lg"
+                                  icon="trash-arrow-up"
+                                  style={{
+                                    color: "#212529",
+                                    cursor: "pointer",
+                                  }}
+                                  onClick={handleFileModalClose}
+                                />
+                              </p>
                             </>
                           ) : (
                             <>
@@ -972,7 +1024,20 @@ export default function App() {
                                 width={300}
                                 alt={userData.fileName}
                               />
-                              <p>{userData.fileName}</p>
+                              <p>
+                                {userData.fileName}{" "}
+                                <MDBIcon
+                                  className="align-self-center mt-1"
+                                  fas
+                                  size="lg"
+                                  icon="trash-arrow-up"
+                                  style={{
+                                    color: "#212529",
+                                    cursor: "pointer",
+                                  }}
+                                  onClick={handleFileModalClose}
+                                />
+                              </p>
                             </>
                           )}
                         </div>
@@ -991,7 +1056,7 @@ export default function App() {
                               <div ref={messagesTopRef} />
                               {message?.map((chat, index) => (
                                 <>
-                                  {chat.receiverName !==
+                                  {chat.senderName ===
                                     currentChatMember.sender?.secondaryUser && (
                                     <li
                                       className="d-flex flex-row justify-content-start"
@@ -1008,22 +1073,48 @@ export default function App() {
                                     /> */}
                                       <div>
                                         <p className="small p-2 ms-3 mb-1 text-white bg-secondary bg-gradient bubble-left">
-                                          {chat.message}
-                                          {chat.fileUrl && (
-                                            <a
-                                              className="download-link"
-                                              href={chat.fileUrl}
-                                            >
-                                              <MDBIcon
-                                                fas
-                                                size="lg"
-                                                icon="file-lines"
+                                          {chat.fileUrl &&
+                                            chat.fileType.includes("image") && (
+                                              <img
+                                                src={chat.fileUrl}
+                                                alt="avatar 1"
                                                 style={{
-                                                  color: "white",
+                                                  width: "200px",
+                                                  height: "300%",
                                                 }}
                                               />
-                                            </a>
-                                          )}
+                                            )}
+                                          {chat.fileUrl &&
+                                            !chat.fileType.includes(
+                                              "image"
+                                            ) && (
+                                              <MDBIcon
+                                                fas
+                                                size="5x"
+                                                icon="file-lines"
+                                                style={{
+                                                  color: "#212529",
+                                                }}
+                                              />
+                                            )}
+                                          <p className="mb-0">
+                                            {chat.message}
+                                            {chat.fileUrl && (
+                                              <a
+                                                className="download-link"
+                                                href={chat.fileUrl}
+                                              >
+                                                <MDBIcon
+                                                  fas
+                                                  size="lg"
+                                                  icon="circle-down"
+                                                  style={{
+                                                    color: "#212529",
+                                                  }}
+                                                />
+                                              </a>
+                                            )}
+                                          </p>
                                         </p>
 
                                         <p className="small ms-3 mb-3 rounded-3 text-muted float-end">
@@ -1040,92 +1131,119 @@ export default function App() {
                                     >
                                       <div>
                                         <p className="small p-2 me-3 mb-1 text-white bg-info bg-gradient bubble-right">
-                                          {chat.message}
-                                          {chat.fileUrl && (
-                                            <a
-                                              className="download-link"
-                                              href={chat.fileUrl}
-                                            >
-                                              <MDBIcon
-                                                fas
-                                                size="lg"
-                                                icon="file-lines"
+                                          {chat.fileUrl &&
+                                            chat.fileType.includes("image") && (
+                                              <img
+                                                src={chat.fileUrl}
+                                                alt="avatar 1"
                                                 style={{
-                                                  color: "white",
+                                                  width: "200px",
+                                                  height: "300%",
                                                 }}
                                               />
-                                            </a>
-                                          )}
-                                          {chat.senderName ===
-                                            userData.username &&
-                                            chat.messageStatus ===
-                                              "DELIVERED" && (
-                                              <span className="text-muted float-end">
-                                                <MDBTooltip
-                                                  tag="a"
-                                                  wrapperProps={{
-                                                    href: "#",
-                                                  }}
-                                                  title="Sent"
-                                                >
-                                                  <MDBIcon
-                                                    fas
-                                                    icon="check"
-                                                    size="xs"
-                                                    style={{
-                                                      color: "black",
-                                                      marginLeft: "1rem",
-                                                    }}
-                                                  />
-                                                </MDBTooltip>
-                                              </span>
                                             )}
-                                          {chat.senderName ===
-                                            userData.username &&
-                                            chat.messageStatus === "READ" && (
-                                              <span className="text-muted float-end">
-                                                <MDBTooltip
-                                                  tag="a"
-                                                  wrapperProps={{
-                                                    href: "#",
-                                                  }}
-                                                  title="Read"
-                                                >
-                                                  <MDBIcon
-                                                    fas
-                                                    icon="check-double"
-                                                    size="xs"
-                                                    style={{
-                                                      color: "white",
-                                                      marginLeft: "1rem",
-                                                    }}
-                                                  />
-                                                </MDBTooltip>
-                                              </span>
+                                          {chat.fileUrl &&
+                                            !chat.fileType.includes(
+                                              "image"
+                                            ) && (
+                                              <MDBIcon
+                                                fas
+                                                size="5x"
+                                                icon="file-lines"
+                                                style={{
+                                                  color: "#212529",
+                                                }}
+                                              />
                                             )}
-                                          {chat.senderName ===
-                                            userData.username &&
-                                            chat.messageStatus === "UNREAD" && (
-                                              <span className="text-muted float-end">
-                                                <MDBTooltip
-                                                  tag="a"
-                                                  wrapperProps={{
-                                                    href: "#",
+                                          <p className="mb-0">
+                                            {chat.message}
+                                            {chat.fileUrl && (
+                                              <a
+                                                className="download-link"
+                                                href={chat.fileUrl}
+                                              >
+                                                <MDBIcon
+                                                  fas
+                                                  size="lg"
+                                                  icon="circle-down"
+                                                  style={{
+                                                    color: "#212529",
                                                   }}
-                                                  title="Unread"
-                                                >
-                                                  <MDBIcon
-                                                    fas
-                                                    icon="check"
-                                                    size="xs"
-                                                    style={{
-                                                      color: "white",
-                                                      marginLeft: "1rem",
-                                                    }}
-                                                  />
-                                                </MDBTooltip>
-                                              </span>
+                                                />
+                                              </a>
                                             )}
+                                            {chat.senderName ===
+                                              userData.username &&
+                                              chat.messageStatus ===
+                                                "DELIVERED" && (
+                                                <span className="text-muted float-end">
+                                                  <MDBTooltip
+                                                    tag="a"
+                                                    wrapperProps={{
+                                                      href: "#",
+                                                    }}
+                                                    title="Sent"
+                                                  >
+                                                    <MDBIcon
+                                                      fas
+                                                      icon="check"
+                                                      size="xs"
+                                                      style={{
+                                                        color: "black",
+                                                        marginLeft: "1rem",
+                                                      }}
+                                                    />
+                                                  </MDBTooltip>
+                                                </span>
+                                              )}
+                                            {chat.senderName ===
+                                              userData.username &&
+                                              chat.messageStatus === "READ" && (
+                                                <span className="text-muted float-end">
+                                                  <MDBTooltip
+                                                    tag="a"
+                                                    wrapperProps={{
+                                                      href: "#",
+                                                    }}
+                                                    title="Read"
+                                                  >
+                                                    <MDBIcon
+                                                      fas
+                                                      icon="check-double"
+                                                      size="xs"
+                                                      style={{
+                                                        color: "white",
+                                                        marginLeft: "1rem",
+                                                      }}
+                                                    />
+                                                  </MDBTooltip>
+                                                </span>
+                                              )}
+                                            {chat.senderName ===
+                                              userData.username &&
+                                              chat.messageStatus ===
+                                                "UNREAD" && (
+                                                <span className="text-muted float-end">
+                                                  <MDBTooltip
+                                                    tag="a"
+                                                    wrapperProps={{
+                                                      href: "#",
+                                                    }}
+                                                    title="Unread"
+                                                  >
+                                                    <MDBIcon
+                                                      fas
+                                                      icon="check"
+                                                      size="xs"
+                                                      style={{
+                                                        color: "white",
+                                                        marginLeft: "1rem",
+                                                      }}
+                                                    />
+                                                  </MDBTooltip>
+                                                </span>
+                                              )}
+                                          </p>
                                         </p>
                                         <p className="small me-3 mb-3 rounded-3 text-muted">
                                           {chat.date}
@@ -1151,7 +1269,10 @@ export default function App() {
                       </div>
                     </MDBCardBody>
                   )}
-                  <form className="border rounded-2">
+                  <form
+                    className="border rounded-2"
+                    style={{ background: "rgb(244, 244, 244)" }}
+                  >
                     <div className="text-muted d-flex justify-content-start align-items-center pe-3 pt-3 mt-1 mb-3 ms-3">
                       <label className="me-3" htmlFor="fileAdd">
                         <MDBIcon
@@ -1186,7 +1307,10 @@ export default function App() {
                         onClick={handleSendMessage}
                         // ref={node => (this.btn = node)}
                         type="submit"
-                        style={{ border: "none", background: "white" }}
+                        style={{
+                          border: "none",
+                          background: "rgb(244, 244, 244)",
+                        }}
                         className="ms-3"
                       >
                         <MDBIcon
@@ -1367,7 +1491,7 @@ export default function App() {
                             <div
                               className="d-flex justify-content-between"
                               onClick={() => {
-                                handleCreateNewChat(user.userName);
+                                handleCreateNewChat(user);
                               }}
                             >
                               <div className="d-flex flex-row">
